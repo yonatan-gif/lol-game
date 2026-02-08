@@ -1,0 +1,2339 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>המירוץ לחופה - אביגיל ויונתן</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&family=Rubik:wght@400;700&family=Orbitron:wght@500;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* GLOBAL RESET */
+        body { font-family: 'Assistant', sans-serif; overflow: hidden; background-color: #FDFCF8; touch-action: manipulation; margin: 0; padding: 0; user-select: none; }
+        
+        /* SCREEN MANAGER */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10;
+        }
+        .screen.active { display: flex; animation: fadeIn 0.5s ease-out; }
+        
+        /* LEVEL MANAGER */
+        .level-wrapper {
+            display: none; width: 100%; height: 100%;
+            flex-direction: column; align-items: center; justify-content: center;
+            position: absolute; top: 0; left: 0; overflow: hidden;
+        }
+        .level-wrapper.active-level { display: flex; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .error-shake { animation: shake 0.3s ease-in-out; border-color: #ef4444 !important; }
+
+        /* FONTS */
+        .font-serif-heading { font-family: 'Playfair Display', serif; }
+        .font-handwriting { font-family: 'Great Vibes', cursive; }
+        .font-digital { font-family: 'Orbitron', monospace; }
+
+        :root{
+            /* 1. Natural Green/Yellow for Level 1 (Nature/Navigation) */
+            --palette-bg-1: linear-gradient(135deg, #ecfccb 0%, #d9f99d 50%, #fef9c3 100%);
+            /* 2. Pink/Blue Mix for Level 2 (Playlist) */
+            --palette-bg-2: linear-gradient(135deg, #fce7f3 0%, #e9d5ff 50%, #bae6fd 100%);
+            /* 3. Deep Purple/Neon for Level 3 (DJ) */
+            --palette-bg-3: linear-gradient(135deg, #e0e7ff 0%, #c4b5fd 50%, #a78bfa 100%);
+        }
+
+        /* תיקון: מסכי המפה ומסכי ההצלחה משתמשים בדיוק באותו משתנה צבע */
+        .map-palette-1, .flash-bg-1 { background: var(--palette-bg-1) !important; color: #365314; }
+        .map-palette-2, .flash-bg-2 { background: var(--palette-bg-2) !important; color: #4a044e; }
+        .map-palette-3, .flash-bg-3 { background: var(--palette-bg-3) !important; color: #312e81; }
+        .map-palette-4 { background-color: #FDFBF7 !important; color: #2F4F2F; background-image: radial-gradient(#E6EFE9 1px, transparent 1px); background-size: 20px 20px; }
+        /* Fix cut-off on desktop + better viewport handling */
+        html, body { height: 100%; }
+        .screen { height: 100dvh; overflow-x: hidden; }
+        .screen.active { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+        /* ====================================== */
+        /*  COUNTDOWN - OLD MOVIE STYLE           */
+        /* ====================================== */
+        #screen-countdown{ background: var(--palette-bg-1); color: #1f2937; }
+        .countdown-film { width: min(520px, 92vw); aspect-ratio: 16/9; border-radius: 14px; position: relative; overflow: hidden;
+            box-shadow: 0 22px 60px rgba(0,0,0,.25); border: 2px solid rgba(255,255,255,.55); background: rgba(255,255,255,.18); backdrop-filter: blur(6px); }
+        .countdown-film::before{ content:""; position:absolute; inset:0;
+            background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.55), transparent 55%),
+            radial-gradient(circle at 70% 75%, rgba(0,0,0,.16), transparent 55%),
+            linear-gradient(180deg, rgba(0,0,0,.10), rgba(255,255,255,.08)); pointer-events:none; }
+        .film-rail{ position:absolute; top:0; bottom:0; width:38px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, .55), rgba(15, 23, 42, .25)); opacity: .9; }
+        .film-rail.left{ left:0; } .film-rail.right{ right:0; }
+        .film-holes{ position:absolute; inset:8px 10px; display:flex; flex-direction:column; gap:10px; }
+        .film-hole{ height:14px; border-radius:3px; background: rgba(255,255,255,.65); box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); opacity:.85; }
+        .countdown-center{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding-inline: 52px; }
+        .countdown-circle{ width: min(260px, 48vw); height: min(260px, 48vw); border-radius:50%;
+            border: 10px solid rgba(31,41,55,.65); background: rgba(255,255,255,.35);
+            box-shadow: inset 0 0 0 3px rgba(255,255,255,.45), inset 0 0 40px rgba(0,0,0,.08); position:relative; }
+        .countdown-lines{ position:absolute; inset:18px; border-radius:50%; border: 2px solid rgba(31,41,55,.25); }
+        .countdown-crosshair{ position:absolute; inset:0; background:
+            linear-gradient(90deg, transparent 49.5%, rgba(31,41,55,.35) 49.5%, rgba(31,41,55,.35) 50.5%, transparent 50.5%),
+            linear-gradient(180deg, transparent 49.5%, rgba(31,41,55,.35) 49.5%, rgba(31,41,55,.35) 50.5%, transparent 50.5%);
+            opacity:.7; border-radius:50%; }
+        .countdown-number{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+            font-family: 'Playfair Display', serif; font-weight: 900; font-size: clamp(72px, 10vw, 140px);
+            color: rgba(31,41,55,.9); text-shadow: 0 3px 0 rgba(255,255,255,.35); animation: countPop 0.8s ease-out; }
+        @keyframes countPop { 0% { transform: scale(2); opacity: 0; } 50% { transform: scale(0.9); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+        .countdown-level-name{ position: static; margin-top: 18px; font-family: 'Assistant', sans-serif; font-weight: 800; letter-spacing: .5px; color: rgba(31,41,55,.75); }
+
+        /* ====================================== */
+        /*  LEVEL 3: MIXER - PADS + FADERS FIXES   */
+        /* ====================================== */
+
+        /* Make the wrapper border/glow cycle too (but not in sync) */
+        .slider-wrapper { width: 42px; background: #111; padding: 3px; border-radius: 5px; border: 2px solid #333; position: relative; display: flex; flex-direction: column; align-items: center; transition: border-color .2s ease, box-shadow .2s ease; }
+        .slider-track { width: 32px; height: 90px; background: #0f172a; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        .slider-glow { position: absolute; inset: 0; opacity: 0.2; pointer-events: none; }
+
+        .cycling { animation: cycleFrame 2.2s linear infinite; }
+        @keyframes cycleFrame {
+            0%   { border-color:#ef4444; box-shadow: 0 0 14px rgba(239,68,68,.35); }
+            33%  { border-color:#22c55e; box-shadow: 0 0 14px rgba(34,197,94,.35); }
+            66%  { border-color:#3b82f6; box-shadow: 0 0 14px rgba(59,130,246,.35); }
+            100% { border-color:#ef4444; box-shadow: 0 0 14px rgba(239,68,68,.35); }
+        }
+        .cycling .slider-glow { animation: cycleColor 2s infinite; }
+        @keyframes cycleColor { 0% { background: red; } 33% { background: green; } 66% { background: blue; } 100% { background: red; } }
+
+        /* phase shift so they don't change together */
+        #wrap-1.cycling { animation-delay: 0s; }
+        #wrap-2.cycling { animation-delay: -0.7s; }
+        #wrap-3.cycling { animation-delay: -1.4s; }
+        #wrap-1.cycling .slider-glow { animation-delay: 0s; }
+        #wrap-2.cycling .slider-glow { animation-delay: -0.6s; }
+        #wrap-3.cycling .slider-glow { animation-delay: -1.2s; }
+
+        .locked-green { border-color: #22c55e !important; box-shadow: 0 0 10px #22c55e !important; animation: none !important; }
+        .locked-red   { border-color: #ef4444 !important; box-shadow: 0 0 10px #ef4444 !important; animation: none !important; }
+        .locked-blue  { border-color: #3b82f6 !important; box-shadow: 0 0 10px #3b82f6 !important; animation: none !important; }
+
+        /* ====================================== */
+        /*  SCREEN 1: INTRO - WARM TONES + FLOWERS */
+        /* ====================================== */
+        #screen-intro { 
+            background-color: #ECFCCB !important; 
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* פרחים דקורטיביים ברקע */
+        .flower-decor {
+            position: absolute;
+            font-size: 2.5rem;
+            opacity: 0.15;
+            animation: floatFlower 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .flower-decor:nth-child(1) { top: 5%; left: 5%; animation-delay: 0s; font-size: 3rem; }
+        .flower-decor:nth-child(2) { top: 15%; right: 8%; animation-delay: -2s; font-size: 2rem; }
+        .flower-decor:nth-child(3) { bottom: 20%; left: 10%; animation-delay: -4s; font-size: 3.5rem; }
+        .flower-decor:nth-child(4) { bottom: 10%; right: 5%; animation-delay: -1s; font-size: 2.5rem; }
+        .flower-decor:nth-child(5) { top: 40%; left: 2%; animation-delay: -3s; font-size: 2rem; }
+        .flower-decor:nth-child(6) { top: 60%; right: 3%; animation-delay: -5s; font-size: 3rem; }
+        .flower-decor:nth-child(7) { top: 8%; left: 50%; animation-delay: -6s; font-size: 2rem; }
+        .flower-decor:nth-child(8) { bottom: 30%; right: 15%; animation-delay: -7s; font-size: 2.5rem; }
+        
+        @keyframes floatFlower {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-15px) rotate(5deg); }
+            50% { transform: translateY(-8px) rotate(-3deg); }
+            75% { transform: translateY(-20px) rotate(8deg); }
+        }
+        
+        /* גבול עליון ותחתון של עיטורי פרחים */
+        .floral-border-top, .floral-border-bottom {
+            position: absolute;
+            left: 0; right: 0;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.3;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .floral-border-top { top: 0; }
+        .floral-border-bottom { bottom: 0; }
+        .floral-border-top span, .floral-border-bottom span { font-size: 1.5rem; }
+
+        .botanical-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px;
+            border-radius: 30px; /* פינות עגולות כמו במפה */
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+            
+            /* מסגרת בצבע זהב/חום כמו המסלול במפה */
+            border: 4px solid #C5A059; 
+            
+            /* צל רך בגוון חום */
+            box-shadow: 0 15px 35px rgba(139, 94, 60, 0.15);
+            
+            position: relative;
+            z-index: 10;
+        }
+               /* כפתור מעוצב וממורכז למסך הפתיחה - החלף את הקוד הישן בזה: */
+        .btn-intro-styled {
+            background-color: #8B5E3C; /* חום התואם לכותרות */
+            color: #ffffff;
+            border: none;
+            border-radius: 50px; /* צורה עגולה ונעימה */
+            padding: 14px 40px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            
+            cursor: pointer;
+            box-shadow: 0 5px 0 #5c3d26; /* אפקט תלת מימד */
+            transition: all 0.2s ease;
+        }
+
+        .btn-intro-styled:hover {
+            background-color: #704b30;
+            transform: translateY(-2px);
+        }
+
+        .btn-intro-styled:active {
+            transform: translateY(4px); /* יורד למטה בלחיצה */
+            box-shadow: none;
+        }
+        /* ====================================== */
+        /*  COUNTDOWN - OLD MOVIE STYLE           */
+        /* ====================================== */
+        #screen-countdown{
+            background: var(--palette-bg-1);
+            color: #1f2937;
+        }
+
+        /* Film countdown: closer to reference image */
+        .countdown-film {
+            width: min(520px, 92vw);
+            aspect-ratio: 16/9;
+            border-radius: 14px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 22px 60px rgba(0,0,0,.25);
+            border: 2px solid rgba(255,255,255,.55);
+            background: rgba(255,255,255,.18);
+            backdrop-filter: blur(6px);
+        }
+
+        .countdown-film::before{
+            content:"";
+            position:absolute; inset:0;
+            background:
+              radial-gradient(circle at 30% 25%, rgba(255,255,255,.55), transparent 55%),
+              radial-gradient(circle at 70% 75%, rgba(0,0,0,.16), transparent 55%),
+              linear-gradient(180deg, rgba(0,0,0,.10), rgba(255,255,255,.08));
+            pointer-events:none;
+        }
+
+        /* Side film strips with sprocket holes */
+        .film-rail{
+            position:absolute; top:0; bottom:0; width:38px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, .55), rgba(15, 23, 42, .25));
+            opacity: .9;
+        }
+        .film-rail.left{ left:0; }
+        .film-rail.right{ right:0; }
+
+        .film-holes{
+            position:absolute; inset:8px 10px;
+            display:flex; flex-direction:column; gap:10px;
+        }
+        .film-hole{
+            height:14px; border-radius:3px;
+            background: rgba(255,255,255,.65);
+            box-shadow: inset 0 0 0 2px rgba(0,0,0,.08);
+            opacity:.85;
+        }
+
+        .countdown-center{
+            position:absolute; inset:0;
+            display:flex; align-items:center; justify-content:center;
+            padding-inline: 52px;
+        }
+        .countdown-circle{
+            width: min(260px, 48vw);
+            height: min(260px, 48vw);
+            border-radius:50%;
+            border: 10px solid rgba(31,41,55,.65);
+            background: rgba(255,255,255,.35);
+            box-shadow: inset 0 0 0 3px rgba(255,255,255,.45), inset 0 0 40px rgba(0,0,0,.08);
+            position:relative;
+        }
+        .countdown-lines{
+            position:absolute; inset:18px;
+            border-radius:50%;
+            border: 2px solid rgba(31,41,55,.25);
+        }
+        .countdown-crosshair{
+            position:absolute; inset:0;
+            background:
+              linear-gradient(90deg, transparent 49.5%, rgba(31,41,55,.35) 49.5%, rgba(31,41,55,.35) 50.5%, transparent 50.5%),
+              linear-gradient(180deg, transparent 49.5%, rgba(31,41,55,.35) 49.5%, rgba(31,41,55,.35) 50.5%, transparent 50.5%);
+            opacity:.7;
+            border-radius:50%;
+        }
+        .countdown-number{
+            position:absolute; inset:0;
+            display:flex; align-items:center; justify-content:center;
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(72px, 10vw, 140px);
+            color: rgba(31,41,55,.9);
+            text-shadow: 0 3px 0 rgba(255,255,255,.35);
+        }
+
+        .countdown-level-name{
+            position: static; /* we’ll place it under the film frame */
+            margin-top: 18px;
+            font-family: 'Assistant', sans-serif;
+            font-weight: 800;
+            letter-spacing: .5px;
+            color: rgba(31,41,55,.75);
+        }
+
+        /* Optional: reduce motion for sensitive devices */
+        @media (prefers-reduced-motion: reduce) {
+            .film-grain, .film-scratches, .dancer, .vinyl-record { animation: none !important; }
+        }
+
+        /* ===== Level 1 visual theme: Chromatic Green/Yellow with REAL ICONS ===== */
+        #level-1{
+            /* רקע צהבהב-ירקרק חי */
+            background: var(--palette-bg-1);
+            position: relative;
+        }
+        
+        /* Decoration Container */
+        .nav-decor {
+            position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+        }
+
+        /* אייקונים בולטים וצבעוניים (לא שקופים) */
+        .nav-floating-icon {
+            position: absolute;
+            background: rgba(255,255,255,0.4);
+            backdrop-filter: blur(2px);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            /* אנימציית ריחוף */
+            animation: floatSlow 6s ease-in-out infinite; 
+            opacity: 1; /* נראה מלא */
+        }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        /* עיצוב ספציפי לכל אביזר בשלב 1 */
+        .icon-compass { 
+            top: 10%; right: 5%; width: 100px; height: 100px; 
+            color: #3f6212; /* Dark Green */
+            background: #d9f99d; /* Lime Bg */
+            border: 3px solid #bef264;
+            transform: rotate(15deg);
+        }
+        .icon-map { 
+            bottom: 12%; left: 5%; width: 140px; height: 140px; 
+            color: #854d0e; /* Brownish Yellow */
+            background: #fef9c3; /* Yellow Bg */
+            border: 3px solid #fde047;
+            animation-delay: -2s; 
+            transform: rotate(-10deg); 
+        }
+        .icon-binocs { 
+            top: 25%; left: 8%; width: 80px; height: 80px; 
+            color: #15803d; /* Green */
+            background: #bbf7d0; 
+            animation-delay: -4s;
+        }
+        .icon-pin { 
+            top: 18%; left: 50%; width: 60px; height: 60px; 
+            color: #ca8a04; /* Dark Yellow */
+            background: #fff;
+            border-radius: 50%;
+            animation-delay: -1s;
+        }
+        .icon-path { 
+            bottom: 25%; right: 10%; width: 110px; height: 110px; 
+            color: #365314; 
+            background: #ecfccb;
+            border: 2px dashed #84cc16;
+            animation-delay: -3s;
+        }
+
+        /* Bring actual content above decor */
+        #level-1 .relative, #level-1 .physical-map-container, #level-1 .gps-screen { position: relative; z-index: 2; }
+
+        /* Improve map card spacing on desktop */
+        #leaflet-map{ height: min(380px, 46vh); }
+
+        /* ====================================== */
+        /*  SCREEN 2: JOURNEY MAP - DYNAMIC COLORS */
+        /* ====================================== */
+        #screen-map { transition: background 0.8s ease-in-out; }
+
+        /* שלב 1: גוונים ירוקים (טבע/ניווט) */
+        .map-palette-1 { 
+            background: var(--palette-bg-1) !important; 
+        }
+        
+        /* שלב 2: גוונים ורודים/סגולים (פלייליסט) */
+        .map-palette-2 { 
+            background: var(--palette-bg-2) !important; 
+        }
+        
+        /* שלב 3: גוונים כהים (DJ/מסיבה) */
+        .map-palette-3 { 
+            background: radial-gradient(circle at center, #2d3748 0%, #1a202c 100%) !important; 
+        }
+        /* התאמת הכותרת לרקע כהה בשלב 3 */
+        .map-palette-3 .map-title { color: #fff !important; text-shadow: 0 0 15px #a855f7; }
+        
+        /* שלב 4: גוון שמנת בוטני (Wordle) */
+        .map-palette-4 { 
+            background-color: #FDFBF7 !important; 
+            background-image: radial-gradient(#E6EFE9 1px, transparent 1px); 
+            background-size: 20px 20px; 
+        }
+        .journey-container { position: relative; width: 100%; max-width: 400px; height: 75vh; }
+        .map-node {
+            width: 65px; height: 65px; border-radius: 50%; background: white;
+            border: 3px solid #E2E8F0; display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif; font-weight: bold; font-size: 1.2rem; color: #94a3b8;
+            position: absolute; z-index: 10; transition: all 0.4s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .map-node.active { border-color: #C5A059; color: #C5A059; transform: scale(1.1); background: #fff; cursor: pointer; box-shadow: 0 0 15px rgba(197, 160, 89, 0.4); animation: pulse 2s infinite; }
+        .map-node.completed { background: #556B2F; border-color: #556B2F; color: white; cursor: default; }
+        .map-node.locked { opacity: 0.6; filter: grayscale(1); }
+        .node-1 { bottom: 5%; left: 50%; transform: translateX(-50%); }
+        .node-2 { bottom: 25%; right: 15%; }
+        .node-3 { bottom: 45%; left: 50%; transform: translateX(-50%); }
+        .node-4 { bottom: 65%; left: 15%; }
+        .node-5 { bottom: 85%; left: 50%; transform: translateX(-50%); }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(197, 160, 89, 0.4); } 100% { box-shadow: 0 0 0 15px rgba(197, 160, 89, 0); } }
+        
+        /* תוויות שלבים על המפה */
+        .node-label {
+            position: absolute;
+            font-size: 0.7rem;
+            font-weight: bold;
+            white-space: nowrap;
+            color: #8B7355;
+            font-family: 'Assistant', sans-serif;
+            pointer-events: none;
+        }
+        
+        #groom-avatar {
+            position: absolute; width: 50px; height: 70px; z-index: 100; pointer-events: none;
+            transition: all 1.2s ease-in-out; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
+            bottom: 5%; left: 50%; transform: translate(-50%, -60px); 
+        }
+        
+        .map-title {
+            font-family: 'Playfair Display', serif;
+            transition: color 1.5s ease-in-out;
+        }
+
+        /* --- SCREEN 3: GAME LEVEL CONTAINER --- */
+        #screen-game { background-color: #fff; }
+
+        /* ====================================== */
+        /*  LEVEL 1: NAVIGATOR DESK              */
+        /* ====================================== */
+        .physical-map-container {
+            background: white; padding: 10px; padding-bottom: 40px; 
+            box-shadow: 5px 10px 20px rgba(0,0,0,0.3); transform: rotate(-2deg);
+            position: relative; width: 90%; max-width: 500px; margin: 0 auto;
+        }
+        #leaflet-map { height: 350px; width: 100%; background-color: #e2e8f0; border: 1px solid #cbd5e1; z-index: 1; }
+        .tape { position: absolute; width: 80px; height: 25px; background-color: rgba(255, 255, 255, 0.4); backdrop-filter: blur(1px); z-index: 50; }
+        .tape.tl { top: -8px; left: -20px; transform: rotate(-35deg); } .tape.tr { top: -8px; right: -20px; transform: rotate(35deg); }
+        .gps-screen { font-family: 'Orbitron', monospace; background: #0f172a; border: 4px solid #334155; color: #4ade80; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+
+        /* ====================================== */
+        /*  LEVEL 2: REFINED PLAYLIST CARD        */
+        /* ====================================== */
+        
+        .turntable-card { 
+            background: rgba(255, 255, 255, 0.95); /* חצי שקוף לזכוכיתיות */
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(167, 139, 250, 0.25);
+            width: 90%; 
+            max-width: 360px; /* קצת יותר צר */
+            
+            /* לוגיקת גובה חשובה לגלילה תקינה */
+            display: flex;
+            flex-direction: column;
+            height: 65vh;       /* גובה יחסי למסך */
+            max-height: 550px;  /* מקסימום כדי לא להימרח */
+            min-height: 350px;  /* מינימום בטיחות */
+            
+            overflow: hidden; 
+            z-index: 10;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .turntable-header { 
+            /* גרדיינט נעים ונקי */
+            background: linear-gradient(135deg, #fbcfe8 0%, #bfdbfe 100%);
+            padding: 24px; 
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        /* תמונת האלבום המסתובבת */
+        .header-vinyl-icon {
+            width: 56px; height: 56px;
+            background: #1e293b;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.8);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex; align-items: center; justify-content: center;
+            animation: spin 8s linear infinite;
+        }
+        .header-vinyl-inner {
+            width: 20px; height: 20px;
+            background: #ec4899;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        /* אזור הרשימה - קריטי לגלילה */
+        #playlist-container {
+            flex: 1; /* תופס את המקום שנשאר */
+            overflow-y: auto; /* כאן קורית הגלילה */
+            background: #fff;
+            padding: 0;
+            /* הסתרת סרגל גלילה מכוער */
+            scrollbar-width: thin;
+            scrollbar-color: #f9a8d4 transparent;
+        }
+
+        .playlist-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: all 0.2s;
+            cursor: default;
+        }
+        .playlist-item:hover { background: #fdf2f8; padding-left: 28px; }
+        .playlist-item .song-num { color: #94a3b8; font-size: 0.85rem; width: 20px; }
+        .playlist-item .song-name { color: #334155; font-weight: 600; font-size: 0.95rem; flex: 1; margin: 0 12px; }
+        .playlist-item .song-dur { color: #ec4899; font-size: 0.75rem; font-weight: 500; background: #fdf2f8; padding: 2px 6px; border-radius: 4px; }
+
+        /* הפוטר החדש */
+        .turntable-footer {
+            flex-shrink: 0;
+            background: #fff;
+            padding: 16px 24px;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+        }
+
+        .input-vinyl {
+            flex: 1; /* יתפוס את כל הרוחב הפנוי */
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            color: #334155;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.25rem;
+            letter-spacing: 2px;
+            text-align: center;
+            padding: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .input-vinyl:focus {
+            background: #fff;
+            border-color: #ec4899;
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+        }
+        .input-vinyl::placeholder { color: #cbd5e1; letter-spacing: 0; }
+
+        .btn-vinyl {
+            width: 52px; height: 52px;
+            border-radius: 12px;
+            border: none;
+            /* גרדיינט בולט לכפתור */
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-vinyl:active { transform: scale(0.92); box-shadow: 0 2px 5px rgba(236, 72, 153, 0.2); }
+
+        /* Success Flash Colors - MATCHING THE LEVELS EXACTLY */
+        .flash-bg-1 { background: linear-gradient(135deg, #84cc16 0%, #eab308 100%); } /* Lime to Yellow */
+        .flash-bg-2 { background: linear-gradient(135deg, #ec4899 0%, #3b82f6 100%); } /* Pink to Blue */
+        .flash-bg-3 { background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%); } /* Purple Neon */
+
+        /* Level 2 Fixes - עיצוב יציב לכרטיס הפלייליסט */
+        .turntable-card { 
+            background: #FFFFFF;
+            border-radius: 24px; /* פינות עגולות יותר */
+            box-shadow: 0 20px 50px rgba(106, 27, 154, 0.15); /* צל רך ועמוק יותר */
+            width: 90%; 
+            max-width: 380px; 
+            overflow: hidden; 
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            
+            /* תיקון קריטי: גובה דינמי שלא חורג מהמסך */
+            height: auto;
+            max-height: 75vh;
+        }
+
+        .turntable-header { 
+            /* גרדיינט עדין יותר לכותרת */
+            background: linear-gradient(135deg, #fdf2f8 0%, #eff6ff 100%);
+            padding: 20px 24px; 
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+            display: flex; /* וידוא שהתוכן בפנים מסודר */
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* אזור הרשימה תופס את המקום שנשאר */
+        #playlist-container {
+            flex: 1; /* תופס את כל הגובה הפנוי */
+            padding: 0;
+            overflow-y: auto; /* מאפשר גלילה רק לאזור הזה */
+            background: #fff;
+            min-height: 150px; /* גובה מינימלי כדי שיראו תמיד שירים */
+        }
+        
+        /* עיצוב הפריטים בתוך הרשימה */
+        .playlist-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 20px; 
+            border-bottom: 1px solid #f8fafc;
+            transition: background 0.2s;
+        }
+        .playlist-item:hover { background: #fdf4ff; }
+        
+        /* תיקון הפוטר של שלב 2 - שייראה טוב תמיד */
+        .turntable-footer {
+            padding: 16px 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: #ffffff;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            flex-shrink: 0; /* מונע כיווץ של הפוטר */
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+            z-index: 20;
+        }
+
+        /* Level 3 Fixes - עיצוב יציב לכרטיס הפלייליסט */
+        .turntable-card { 
+            background: #FFFFFF;
+            border-radius: 16px; padding: 40px 30px;
+            box-shadow: 0 0 0 4px #fff, 0 0 0 6px #D4A574, 0 20px 40px rgba(180, 120, 60, 0.15);
+            max-width: 420px; width: 90%; text-align: center; position: relative; z-index: 20;
+        }
+
+        .turntable-header { 
+            background: linear-gradient(90deg, #f9a8d4 0%, #93c5fd 100%);
+            padding: 20px; 
+            flex-shrink: 0;
+        }
+
+        /* אזור הרשימה תופס את המקום שנשאר */
+        #playlist-container {
+            flex: 1; 
+            padding: 10px 0;
+            overflow-y: auto;
+            background: #fff;
+        }
+        
+        /* תיקון הפוטר של שלב 2 - שייראה טוב תמיד */
+        .turntable-footer {
+            padding: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: linear-gradient(180deg, #fdf4ff 0%, #f0f9ff 100%); 
+            border-top: 1px solid rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        /* אינפוט נקי ויפה */
+        .input-vinyl {
+            flex: 1;
+            background: #fff;
+            border: 2px solid #f472b6;
+            border-radius: 50px;
+            color: #db2777;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 12px;
+            outline: none;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.03);
+        }
+        .input-vinyl:focus { border-color: #c084fc; box-shadow: 0 0 0 4px rgba(192, 132, 252, 0.2); }
+
+        .btn-vinyl {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #ec4899 0%, #3b82f6 100%);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s active;
+        }
+        .btn-vinyl:active { transform: scale(0.95); }
+
+        /* ====================================== */
+        /*  LEVEL 3: 3D MIXER & PARTY             */
+        /* ====================================== */
+        #level-3 { background: #000; overflow: hidden; perspective: 1200px; }
+        
+        #level-3-bg {
+            background: radial-gradient(ellipse at 50% 30%, #4a3f6b 0%, #2d2b55 30%, #1a1a2e 70%, #0d0d1a 100%);
+            position: absolute; inset: 0; overflow: hidden; z-index: 0;
+        }
+        .neon-ball { position: absolute; border-radius: 50%; filter: blur(40px); opacity: 0.4; animation: moveLight 6s infinite alternate; }
+        @keyframes moveLight { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(50px, -50px) scale(1.2); } }
+
+        .dance-floor-scene {
+            position: absolute; top: 0; left: 0; width: 100%; height: 55%;
+            perspective: 900px; overflow: hidden; z-index: 1;
+        }
+        
+        .dance-floor-ground {
+            position: absolute; bottom: 0; left: -10%; width: 120%; height: 80%;
+            background: linear-gradient(180deg, rgba(30,20,50,0.3) 0%, rgba(40,30,60,0.5) 40%, rgba(50,40,70,0.7) 100%);
+            transform: rotateX(55deg); transform-origin: bottom center;
+        }
+
+        .floor-spot { 
+            position: absolute; bottom: 15%; left: 50%; 
+            transform: translateX(-50%) rotateX(55deg); 
+            width: 280px; height: 280px; 
+            background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(200,160,255,0.3) 20%, rgba(236,72,153,0.15) 45%, transparent 70%);
+            box-shadow: 0 0 80px rgba(200,160,255,0.15);
+            z-index: 2; border-radius: 50%;
+        }
+
+        .laser-beam {
+            position: absolute; width: 2px; height: 200px; opacity: 0.3;
+            z-index: 3; transform-origin: top center;
+        }
+        .laser-beam:nth-child(1) { top: 0; left: 30%; background: linear-gradient(180deg, #ff00ff, transparent); transform: rotate(-15deg); animation: laserSway 3s ease-in-out infinite alternate; }
+        .laser-beam:nth-child(2) { top: 0; left: 50%; background: linear-gradient(180deg, #00ffff, transparent); transform: rotate(5deg); animation: laserSway 4s ease-in-out infinite alternate-reverse; }
+        .laser-beam:nth-child(3) { top: 0; left: 70%; background: linear-gradient(180deg, #ff00ff, transparent); transform: rotate(15deg); animation: laserSway 3.5s ease-in-out infinite alternate; }
+        @keyframes laserSway { 0% { transform: rotate(var(--from, -15deg)); } 100% { transform: rotate(var(--to, 15deg)); } }
+
+        .station { position: absolute; z-index: 5; transform-style: preserve-3d; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.6)); }
+        .station-left { left: 3%; bottom: 25%; transform: perspective(600px) rotateY(35deg) rotateX(-5deg) scale(0.85); }
+        .station-right { right: 3%; bottom: 25%; transform: perspective(600px) rotateY(-35deg) rotateX(-5deg) scale(0.85); }
+        
+        .cart-box { 
+            width: 70px; height: 45px; background: linear-gradient(180deg, #f59e0b, #d97706); 
+            border: 2px solid #b45309; border-radius: 5px; 
+            display: flex; align-items: center; justify-content: center; font-size: 22px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative;
+        }
+        .cart-box::after { content: 'HOT DOG'; position: absolute; bottom: -16px; font-size: 7px; color: #fbbf24; font-weight: bold; letter-spacing: 1px; text-shadow: 0 0 4px rgba(0,0,0,0.8); }
+
+        .bar-counter { 
+            width: 90px; height: 40px; background: linear-gradient(180deg, #1e3a8a, #1e2d6a); 
+            border-top: 3px solid #60a5fa; border-radius: 3px;
+            display: flex; justify-content: space-around; align-items: flex-end; padding-bottom: 3px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative;
+        }
+        .bar-counter::after { content: 'BAR'; position: absolute; bottom: -16px; font-size: 8px; color: #60a5fa; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 4px rgba(0,0,0,0.8); }
+        .bottle { width: 8px; height: 18px; border-radius: 2px 2px 0 0; }
+
+        .crowd-layer { 
+            position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%); 
+            display: flex; justify-content: center; align-items: flex-end; 
+            gap: 0; width: 220px; height: 130px; z-index: 4; 
+        }
+        .crowd-layer-back {
+            position: absolute; bottom: 18%; left: 50%; 
+            transform: translateX(-50%) scale(0.7);
+            display: flex; justify-content: center; align-items: flex-end; 
+            gap: 0; width: 180px; height: 100px; z-index: 3; opacity: 0.6;
+        }
+        
+        .dancer { 
+            width: 38px; height: 85px; 
+            background: linear-gradient(180deg, #1a1a2a, #0a0a15);
+            margin: 0 -5px; position: relative;
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 220'%3E%3Cellipse cx='50' cy='25' rx='18' ry='22'/%3E%3Cpath d='M35 47 C30 47 25 55 28 90 L22 140 C20 150 30 155 35 145 L40 100 L45 145 C48 155 58 150 55 140 L50 90 C53 55 48 47 43 47 Z'/%3E%3Cpath d='M28 55 C15 60 10 75 18 80 L32 70 Z'/%3E%3Cpath d='M50 55 C63 60 68 75 60 80 L46 70 Z'/%3E%3Crect x='22' y='140' width='14' height='8' rx='3'/%3E%3Crect x='42' y='140' width='14' height='8' rx='3'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 220'%3E%3Cellipse cx='50' cy='25' rx='18' ry='22'/%3E%3Cpath d='M35 47 C30 47 25 55 28 90 L22 140 C20 150 30 155 35 145 L40 100 L45 145 C48 155 58 150 55 140 L50 90 C53 55 48 47 43 47 Z'/%3E%3Cpath d='M28 55 C15 60 10 75 18 80 L32 70 Z'/%3E%3Cpath d='M50 55 C63 60 68 75 60 80 L46 70 Z'/%3E%3Crect x='22' y='140' width='14' height='8' rx='3'/%3E%3Crect x='42' y='140' width='14' height='8' rx='3'/%3E%3C/svg%3E");
+            -webkit-mask-size: contain; mask-size: contain;
+            -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+            -webkit-mask-position: center bottom; mask-position: center bottom;
+        }
+        
+        .dancer { animation: danceBounce 0.6s infinite alternate ease-in-out; }
+        .dancer:nth-child(1) { animation-delay: 0s; animation-duration: 0.5s; }
+        .dancer:nth-child(2) { animation-delay: 0.1s; animation-duration: 0.55s; height: 78px; }
+        .dancer:nth-child(3) { animation-delay: 0.2s; animation-duration: 0.45s; height: 90px; }
+        .dancer:nth-child(4) { animation-delay: 0.05s; animation-duration: 0.6s; height: 75px; }
+        .dancer:nth-child(5) { animation-delay: 0.15s; animation-duration: 0.5s; }
+        .dancer:nth-child(6) { animation-delay: 0.25s; animation-duration: 0.55s; height: 80px; }
+        .dancer:nth-child(7) { animation-delay: 0.08s; animation-duration: 0.48s; height: 72px; }
+        
+        @keyframes danceBounce { 
+            0% { transform: translateY(0) scaleY(1); } 
+            50% { transform: translateY(-8px) scaleY(1.02); }
+            100% { transform: translateY(-12px) scaleY(0.98); } 
+        }
+
+        .stage-barrier {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, transparent, rgba(100,80,150,0.5), rgba(150,120,200,0.6), rgba(100,80,150,0.5), transparent);
+            z-index: 10;
+        }
+
+        /* === DJ Booth - REDESIGNED LAYOUT === */
+        .booth-container {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 48%;
+            perspective: 900px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 10px; z-index: 20;
+        }
+
+        .dj-board {
+            width: 96%; max-width: 600px; height: auto;
+            background: linear-gradient(180deg, #3d4a5c 0%, #2a3444 40%, #1e293b 100%);
+            border-radius: 10px 10px 6px 6px;
+            /* FIXED: Lower angle and preserve-3d for clicks */
+            transform: rotateX(20deg); 
+            transform-style: preserve-3d;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.7), 0 8px 0 #0f172a, inset 0 1px 0 rgba(255,255,255,0.1);
+            border-bottom: 5px solid #0f172a;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 8px 10px; display: flex; flex-direction: column; gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        /* === MAIN ROW: Screen + Faders side by side === */
+        .board-main-row {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        /* מסך + מקלדת בצד שמאל */
+        .screen-unit {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .monitor-frame {
+            width: 100%;
+            height: 90px;
+            background: #0a0f1a;
+            border: 2px solid #334155;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 0 8px rgba(34, 197, 94, 0.1);
+        }
+        
+        /* תצוגת סאונד מלאה */
+        .monitor-display {
+            width: 100%; height: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            padding: 4px 6px;
+            position: relative;
+        }
+        
+        .monitor-bar {
+            flex: 1;
+            max-width: 8px;
+            min-width: 3px;
+            background: linear-gradient(180deg, #ef4444 0%, #f59e0b 30%, #22c55e 60%, #22c55e 100%);
+            border-radius: 1px 1px 0 0;
+            animation: monitorWave 0.4s ease-in-out infinite alternate;
+            transform-origin: bottom;
+        }
+        .monitor-bar:nth-child(odd) { animation-duration: 0.35s; }
+        .monitor-bar:nth-child(3n) { animation-duration: 0.5s; }
+        .monitor-bar:nth-child(4n+1) { animation-duration: 0.3s; }
+        
+        @keyframes monitorWave {
+            0% { height: 15%; }
+            100% { height: var(--max-h, 85%); }
+        }
+        
+        .monitor-overlay {
+            position: absolute; top: 0; left: 0; right: 0;
+            padding: 3px 6px;
+            display: flex; justify-content: space-between; align-items: center;
+            pointer-events: none;
+        }
+        .monitor-overlay span {
+            font-family: 'Orbitron', monospace;
+            font-size: 6px;
+            color: #4ade80;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 4px rgba(74, 222, 128, 0.5);
+        }
+        
+        /* גלי קול (waveform) בתחתית המסך */
+        .waveform-line {
+            position: absolute;
+            bottom: 4px; left: 6px; right: 6px;
+            height: 15px;
+            display: flex;
+            align-items: center;
+            gap: 1px;
+            opacity: 0.4;
+        }
+        .wave-dot {
+            width: 2px;
+            flex-shrink: 0;
+            background: #00ffff;
+            border-radius: 1px;
+            animation: wavePulse 0.6s ease-in-out infinite alternate;
+        }
+        @keyframes wavePulse {
+            0% { height: 2px; }
+            100% { height: var(--wh, 10px); }
+        }
+        
+        /* מקלדת מתחת למסך */
+        .keyboard-unit {
+            width: 100%;
+            height: 35px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            padding: 3px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        }
+        .kb-key {
+            background: #334155;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .kb-key:active { background: #4ade80; }
+        .kb-key.pressed { background: #22c55e; box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
+        
+        /* סליידרים בצד ימין */
+        .faders-column {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .faders-area { display: flex; align-items: flex-end; justify-content: center; gap: 8px; width: 100%; padding-bottom: 3px; }
+        .slider-wrapper { width: 42px; background: #111; padding: 3px; border-radius: 5px; border: 2px solid #333; position: relative; display: flex; flex-direction: column; align-items: center; transition: border-color .2s ease, box-shadow .2s ease; }
+        .slider-track { width: 32px; height: 90px; background: #0f172a; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        .slider-glow { position: absolute; inset: 0; opacity: 0.2; pointer-events: none; }
+        .cycling .slider-glow { animation: cycleColor 2s infinite; }
+        @keyframes cycleColor { 0% { background: red; } 33% { background: green; } 66% { background: blue; } 100% { background: red; } }
+        .locked-green { border-color: #22c55e !important; box-shadow: 0 0 10px #22c55e; }
+        .locked-red { border-color: #ef4444 !important; box-shadow: 0 0 10px #ef4444; }
+        .locked-blue { border-color: #3b82f6 !important; box-shadow: 0 0 10px #3b82f6; }
+        .fader-cap { position: absolute; left: 2px; right: 2px; height: 18px; background: linear-gradient(#94a3b8, #475569); border-radius: 2px; pointer-events: none; z-index: 10; bottom: 0%; }
+        input[type=range] { -webkit-appearance: slider-vertical; width: 100%; height: 100%; opacity: 0; position: absolute; top: 0; left: 0; z-index: 50; cursor: pointer; }
+        .digital-val { font-family: 'Orbitron', monospace; font-size: 9px; color: #4ade80; text-align: center; padding: 2px 0; }
+        
+        /* Pads: IMPORTANT - do NOT override Tailwind bg-* with a fixed background */
+        .pad-grid { 
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; 
+            background: #0f172a; border-radius: 4px; margin-top: auto; 
+            /* FIXED: Lift up for clicks */
+            transform: translateZ(10px); 
+            position: relative;
+            z-index: 50; 
+        }
+        .pad-btn {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            background: transparent; /* don't override bg-* */
+            border: 1px solid rgba(148,163,184,.45);
+            cursor: pointer;
+            transition: transform 0.12s ease, opacity 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+        }
+        .pad-btn.lit { 
+            opacity: 1; 
+            filter: saturate(1.2) brightness(1.1); 
+            box-shadow: 0 0 10px currentColor; 
+            border-color: rgba(255,255,255,0.8); 
+        }
+        .pad-btn.dim { 
+            opacity: 0.2; 
+            filter: grayscale(100%) brightness(0.5); 
+            box-shadow: none; 
+            border-color: rgba(255,255,255,0.1); 
+        }
+        .pad-btn:active { transform: scale(0.92); }
+
+        /* Jog wheels */
+        .jog-wheel {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: radial-gradient(circle, #555 0%, #333 50%, #222 100%);
+            border: 2px solid #555;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.6), 0 2px 5px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        .jog-wheel::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 8px; height: 8px;
+            background: #666;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .slider-wrapper {
+            width: 42px;
+            background: #111;
+            padding: 3px;
+            border-radius: 5px;
+            border: 2px solid #333;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        /* Glow inside */
+        .slider-glow { position: absolute; inset: 0; opacity: 0.2; pointer-events: none; }
+
+        /* Make the wrapper border/glow cycle too */
+        .cycling {
+            animation: cycleFrame 2.2s linear infinite;
+        }
+        @keyframes cycleFrame {
+            0%   { border-color:#ef4444; box-shadow: 0 0 14px rgba(239,68,68,.35); }
+            33%  { border-color:#22c55e; box-shadow: 0 0 14px rgba(34,197,94,.35); }
+            66%  { border-color:#3b82f6; box-shadow: 0 0 14px rgba(59,130,246,.35); }
+            100% { border-color:#ef4444; box-shadow: 0 0 14px rgba(239,68,68,.35); }
+        }
+
+        /* Keep the inner glow cycling as well */
+        .cycling .slider-glow { animation: cycleColor 2s infinite; }
+        @keyframes cycleColor { 0% { background: red; } 33% { background: green; } 66% { background: blue; } 100% { background: red; } }
+
+        /* Locked styles stay fixed */
+        .locked-green { border-color: #22c55e !important; box-shadow: 0 0 10px #22c55e !important; animation: none !important; }
+        .locked-red   { border-color: #ef4444 !important; box-shadow: 0 0 10px #ef4444 !important; animation: none !important; }
+        .locked-blue  { border-color: #3b82f6 !important; box-shadow: 0 0 10px #3b82f6 !important; animation: none !important; }
+
+        /* ====================================== */
+        /*  LEVEL 2: CSS FIX FOR MISSING BUTTON   */
+        /* ====================================== */
+
+        /* עדכון הקונטיינר הראשי - גובה גמיש יותר עם מקסימום */
+        .turntable-card { 
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(167, 139, 250, 0.25);
+            width: 90%; 
+            max-width: 380px;
+            
+            /* הגדרת גובה חכמה למסכים שונים */
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;       /* לא יחרוג מ-80% גובה מסך */
+            min-height: 400px;
+            overflow: hidden;       /* מסתיר גלישה חיצונית */
+            position: relative;
+        }
+
+        .turntable-header { 
+            background: linear-gradient(135deg, #fbcfe8 0%, #bfdbfe 100%);
+            padding: 20px; 
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* אזור הרשימה - חשוב: min-height: 0 כדי לאפשר גלילה בתוך פלקס */
+        #playlist-container {
+            flex: 1; 
+            min-height: 0; 
+            overflow-y: auto; 
+            background: #fff;
+            padding-bottom: 10px;
+        }
+
+        /* --- תיקון הפוטר: שימוש ב-GRID במקום FLEX --- */
+        .turntable-footer {
+            flex-shrink: 0;
+            background: #fff;
+            padding: 16px;
+            border-top: 1px solid #f1f5f9;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+            z-index: 20;
+
+            /* התיקון הקריטי: מחלק את השורה ל-2 */
+            display: grid;
+            /* עמודה אחת גמישה (אינפוט), עמודה שנייה קבועה (כפתור) */
+            grid-template-columns: 1fr auto; 
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-vinyl {
+            width: 100%; /* תופס את כל המקום בתא שלו */
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            color: #334155;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.25rem;
+            letter-spacing: 2px;
+            text-align: center;
+            padding: 12px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .input-vinyl:focus {
+            background: #fff;
+            border-color: #ec4899;
+            box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1);
+        }
+
+        .btn-vinyl {
+            width: 56px; height: 56px; /* גודל קבוע וברור */
+            border-radius: 16px;
+            border: none;
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn-vinyl:active { transform: scale(0.95); }
+
+        /* ====================================== */
+        /*  LEVEL 4: WORDLOLA (BOTANICAL)         */
+        /* ====================================== */
+        
+        #level-4 {
+            background-color: #FDFBF7; /* Soft Cream */
+            background-image: radial-gradient(#E6EFE9 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .wordle-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* תיקון: 5 עמודות עבור 5 אותיות */
+            gap: 8px;
+            margin: 0 auto 20px auto; /* מרכוז הלוח */
+            padding: 10px;
+             width: 100%;       /* מכריח את הלוח להיפתח לרוחב */
+            max-width: 340px; /* הגבלת רוחב כדי לשמור על צורה ריבועית */
+        }
+
+        /* .wordle-row - מחקנו כי לא משתמשים בו */
+
+        .wordle-tile {
+            aspect-ratio: 1; /* שומר שהאריח יהיה ריבוע מושלם */
+            width: 100%;     /* מתמלא לפי הגריד */
+            height: auto;
+            background: #FFFFFF;
+            border: 2px solid #D4AF37;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; font-weight: bold; color: #2F4F2F;
+            text-transform: uppercase;
+            box-shadow: 2px 2px 0 rgba(212, 175, 55, 0.2);
+            transition: all 0.3s ease;
+        }
+        /* Animation Classes */
+        .tile-filled { border-color: #8F9E8A; transform: scale(1.05); }
+        .tile-flip { animation: flip 0.6s ease forwards; }
+
+        @keyframes flip {
+            0% { transform: rotateX(0); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0); }
+        }
+
+        /* Result Colors */
+        .tile-correct { background-color: #8FBC8F !important; color: white !important; border-color: #8FBC8F !important; } /* Sage */
+        .tile-present { background-color: #EEDC82 !important; color: white !important; border-color: #EEDC82 !important; } /* Mustard */
+        .tile-absent  { background-color: #D3D3D3 !important; color: white !important; border-color: #D3D3D3 !important; } /* Gray */
+
+        /* Keyboard */
+        .wordle-keyboard {
+            width: 100%; max-width: 500px;
+            display: flex; flex-direction: column; gap: 6px;
+            padding: 4px;
+        }
+        .kb-row { display: flex; justify-content: center; gap: 4px; width: 100%; }
+        
+        .key-btn {
+            font-family: 'Assistant', sans-serif; font-weight: bold;
+            background: #fff; border: 1px solid #D4D4D8; border-radius: 6px;
+            height: 48px; flex: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; cursor: pointer;
+            box-shadow: 0 2px 0 #E4E4E7;
+            transition: transform 0.1s;
+            color: #3F3F46;
+        }
+        .key-btn:active { transform: translateY(2px); box-shadow: none; }
+        .key-special { flex: 1.5; font-size: 0.9rem; background: #F4F4F5; }
+
+        .key-correct { background-color: #8FBC8F; color: white; border-color: #8FBC8F; }
+        .key-present { background-color: #EEDC82; color: white; border-color: #EEDC82; }
+        .key-absent  { background-color: #D3D3D3; color: white; border-color: #D3D3D3; }
+
+        /* Popups */
+        .toast-msg {
+            position: absolute; top: 12%; left: 50%; transform: translateX(-50%);
+            background: #2F4F2F; color: white; padding: 10px 20px;
+            border-radius: 8px; font-weight: bold; z-index: 100;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        .toast-visible { opacity: 1; }
+        
+        /* Win Modal */
+        #wordle-win-modal {
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid #D4AF37;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        @keyframes avatarVictoryDance {
+            0% { transform: translate(-50%, -60px) scale(1) rotate(0deg); }
+            25% { transform: translate(-50%, -90px) scale(1.1) rotate(-15deg); } /* קפיצה שמאלה */
+            50% { transform: translate(-50%, -60px) scale(1) rotate(0deg); } /* נחיתה */
+            75% { transform: translate(-50%, -90px) scale(1.1) rotate(15deg); } /* קפיצה ימינה */
+            100% { transform: translate(-50%, -60px) scale(1) rotate(0deg); }
+        }
+        
+        .avatar-dancing {
+            animation: avatarVictoryDance 0.6s infinite ease-in-out !important;
+        }
+                /* --- SCRATCH CARD STYLES --- */
+                .scratch-container {
+            position: relative;
+            width: 100%;
+            height: 180px; /* גובה קבוע לכרטיס */
+            margin: 0 auto 20px auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+
+        /* התוכן המוסתר (הפרס) */
+        .scratch-content {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #FFFBF0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1; /* נמוך */
+        }
+
+        /* שכבת הגירוד (הקנבס) */
+        .scratch-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2; /* מעל התוכן */
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%23000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>') 16 16, auto;
+            touch-action: none; /* מונע גלילה בזמן גירוד בטלפון */
+        }
+
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- ====================================== -->
+    <!--  SCREEN 1: INTRO                       -->
+    <!-- ====================================== -->
+    <div id="screen-intro" class="screen active">
+        <!-- פרחים דקורטיביים -->
+        <div class="flower-decor">🌸</div>
+        <div class="flower-decor">🌺</div>
+        <div class="flower-decor">🌷</div>
+        <div class="flower-decor">🌹</div>
+        <div class="flower-decor">🌻</div>
+        <div class="flower-decor">🌼</div>
+        <div class="flower-decor">💐</div>
+        <div class="flower-decor">🌿</div>
+        
+        <!-- גבול פרחים עליון -->
+        <div class="floral-border-top">
+            <span>🌿</span><span>🌸</span><span>🌿</span><span>🌺</span><span>🌿</span><span>🌸</span><span>🌿</span><span>🌺</span><span>🌿</span>
+        </div>
+        
+        <div class="botanical-card animate-float">
+            <h1 class="font-serif-heading text-6xl mb-2 font-black" style="color: #d38b39;">אביגיל!</h1>
+            
+            <!-- טקסט בחום כהה וירוק זית -->
+            <div class="space-y-4 mb-10 text-lg font-bold leading-relaxed">
+                <p style="color: #000000;">יונתן קם בבוקר וגילה שנשארו לו עוד 4 משימות לבצע עד החופה...</p>
+                <p style="color: #d19616;">רק את יכולה לעזור לו להספיק להגיע בזמן לחופה!</p>
+            </div>
+            
+            <!-- העטיפה הזו (div) דואגת למירכוז הכפתור -->
+            <div class="w-full flex justify-center mt-6">
+                <!-- זה הכפתור עם המחלקה החדשה שיצרנו -->
+                <button onclick="goToMap()" class="btn-intro-styled">
+                    בואי נתחיל
+                    <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+        <!-- גבול פרחים תחתון -->
+        <div class="floral-border-bottom">
+            <span>🌿</span><span>🌷</span><span>🌿</span><span>🌹</span><span>🌿</span><span>🌷</span><span>🌿</span><span>🌹</span><span>🌿</span>
+        </div>
+    </div>
+
+    <!-- ====================================== -->
+    <!--  SCREEN 2: COUNTDOWN (OLD MOVIE)       -->
+    <!-- ====================================== -->
+    <div id="screen-countdown" class="screen">
+        <div class="countdown-film" aria-label="ספירה לאחור">
+            <div class="film-rail left">
+                <div class="film-holes">
+                    <div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div>
+                    <div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div>
+                </div>
+            </div>
+            <div class="film-rail right">
+                <div class="film-holes">
+                    <div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div>
+                    <div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div>
+                </div>
+            </div>
+
+            <!-- keep your grain/scratches if you want, but inside the film frame -->
+            <div class="film-grain"></div>
+            <div class="film-scratches"></div>
+            <div class="vignette"></div>
+
+            <div class="countdown-center">
+                <div class="countdown-circle">
+                    <div class="countdown-lines"></div>
+                    <div class="countdown-crosshair"></div>
+                    <div id="countdown-text" class="countdown-number">3</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="countdown-level-name" id="countdown-level-name">שלב 1: ניווט</div>
+    </div>
+
+    <!-- ====================================== -->
+    <!--  SCREEN 3: JOURNEY MAP                 -->
+    <!-- ====================================== -->
+    <div id="screen-map" class="screen map-palette-1">
+        <h2 class="map-title text-4xl font-bold z-20 mb-4" id="map-title" style="color: #8B5E3C;">מפת הדרך</h2>
+        <div class="journey-container" id="journey-container">
+            <svg class="map-path-svg" viewBox="0 0 100 200" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;z-index:1;">
+                <path d="M50 185 C 50 150, 90 150, 90 120 C 90 90, 10 90, 10 60 C 10 30, 50 30, 50 15" 
+                      fill="none" stroke="#C5A059" stroke-width="3" stroke-dasharray="8,8" opacity="0.4"/>
+            </svg>
+            
+            <div id="groom-avatar">
+                 <svg width="50" height="70" viewBox="0 0 50 70">
+                    <circle cx="25" cy="15" r="12" fill="#FFDBAC" />
+                    <path d="M13 15 Q 25 0 37 15" stroke="#A0522D" stroke-width="4" fill="none" />
+                    <path d="M15 18 Q 25 32 35 18" fill="#8B4513" opacity="0.8" />
+                    <rect x="10" y="28" width="30" height="40" rx="5" fill="#1E3A8A" />
+                    <path d="M25 28 L35 28 L25 40 L15 28 Z" fill="white" />
+                    <path d="M20 30 L30 30 L25 35 Z" fill="black" />
+                    <path d="M20 35 L30 35 L25 30 Z" fill="black" />
+                </svg>
+            </div>
+
+            <div id="node-1" class="map-node node-1 active" onclick="enterLevel(1)">
+                1
+                <span class="node-label" style="top: -22px; left: 50%; transform: translateX(-50%);">ניווט</span>
+            </div>
+            <div id="node-2" class="map-node node-2 locked" onclick="enterLevel(2)">
+                2
+                <span class="node-label" style="top: -22px; left: 50%; transform: translateX(-50%);">פלייליסט</span>
+            </div>
+            <div id="node-3" class="map-node node-3 locked" onclick="enterLevel(3)">
+                3
+                <span class="node-label" style="top: -22px; left: 50%; transform: translateX(-50%);">DJ</span>
+            </div>
+            <div id="node-4" class="map-node node-4 locked" onclick="enterLevel(4)">
+                4
+                <span class="node-label" style="top: -22px; left: 50%; transform: translateX(-50%);">Wordlol</span>
+            </div>
+            <div id="node-final" class="absolute z-10 flex flex-col items-center justify-end" style="bottom: 85%; left: 50%; transform: translateX(-50%); width: 100px; height: 100px;">
+                <svg viewBox="0 0 100 80" class="w-full h-full drop-shadow-xl" style="overflow: visible;">
+                    <!-- דשא -->
+                    <path d="M-10 80 Q 50 70 110 80" fill="#4ade80" stroke="none" />
+                    <!-- עמודי חופה -->
+                    <rect x="20" y="30" width="4" height="50" fill="#FFF8DC" stroke="#DEB887" stroke-width="1"/>
+                    <rect x="76" y="30" width="4" height="50" fill="#FFF8DC" stroke="#DEB887" stroke-width="1"/>
+                    <!-- בד עליון -->
+                    <path d="M15 30 Q 50 10 85 30 Q 50 45 15 30" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+                    <!-- בד צדדי נשפך -->
+                    <path d="M20 30 Q 15 50 22 55" fill="none" stroke="white" stroke-width="3" opacity="0.8"/>
+                    <path d="M80 30 Q 85 50 78 55" fill="none" stroke="white" stroke-width="3" opacity="0.8"/>
+                </svg>
+                <span class="font-serif-heading font-bold text-[#8B5E3C] text-sm mt-1 bg-white/80 px-2 rounded shadow">חופה!</span>
+            </div>
+        </div>
+        <p class="font-bold mt-4 animate-pulse z-20" style="color: #8B5E3C;">לחצי על השלב הנוכחי כדי להתקדם</p>
+    </div>
+
+    <!-- ====================================== -->
+    <!--  SCREEN 4: GAME WRAPPER                -->
+    <!-- ====================================== -->
+    <div id="screen-game" class="screen p-0 overflow-hidden">
+        
+        <!-- HUD -->
+        <div class="absolute top-0 w-full p-4 z-50 flex justify-between items-center pointer-events-none">
+            <div id="level-indicator" class="bg-white/90 px-4 py-2 rounded-full shadow font-bold text-[#2F4F2F] border-2 border-white pointer-events-auto">שלב 1</div>
+            <button onclick="nextHint()" class="w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center text-[#C5A059] border-2 border-white pointer-events-auto" id="hint-btn">
+                <i data-lucide="lightbulb" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <!-- NEW: Success Flash with Dynamic Color -->
+        <div id="success-flash" class="absolute inset-0 z-[100] flex flex-col items-center justify-center text-slate-900 hidden">
+            <div class="text-8xl font-black animate-bounce mb-4 font-serif-heading">בול!</div>
+            <p class="text-2xl font-bold">יונתן מתקרב לחופה...</p>
+        </div>
+
+        <div id="hint-box" class="absolute top-20 left-1/2 -translate-x-1/2 w-11/12 max-w-sm z-[60] hidden">
+            <div class="bg-white/95 p-4 rounded-xl border-2 border-yellow-200 shadow-2xl text-right">
+                <div class="text-[#C5A059] font-bold mb-2 border-b-2 border-yellow-50 pb-1">עזרה מלול (<span id="hint-num">1</span>/3)</div>
+                <div id="hint-content" class="text-lg font-medium text-slate-700"></div>
+            </div>
+        </div>
+
+        <!-- LEVEL 1: NAVIGATOR -->
+        <div id="level-1" class="level-wrapper">
+             <!-- דקורציה של ניווט ברקע -->
+             <div class="nav-decor">
+                <i data-lucide="compass" class="nav-floating-icon icon-compass"></i>
+                <i data-lucide="map" class="nav-floating-icon icon-map"></i>
+                <i data-lucide="binoculars" class="nav-floating-icon icon-binocs"></i>
+                <i data-lucide="navigation" class="nav-floating-icon icon-path"></i>
+                <i data-lucide="map-pin" class="nav-floating-icon icon-pin"></i>
+            </div>
+            
+            <div class="relative z-10 w-full max-w-lg px-4 flex flex-col items-center">
+                <h2 class="text-5xl font-black text-amber-900 mb-6 font-serif-heading tracking-wide" style="text-shadow: 2px 2px 0px rgba(255,255,255,0.5);">ניווט</h2>
+                <p class="text-xl font-bold text-black mb-6 text-center max-w-md leading-tight">יונתן שוב איבד את הדרך. עזרי לו למצוא מקומות מוכרים</p>
+                <div class="physical-map-container">
+                    <div class="tape tl"></div><div class="tape tr"></div>
+                    <div id="leaflet-map"></div>
+                </div>
+                <div class="mt-8 gps-screen rounded-xl p-4 w-full max-w-xs shadow-2xl">
+                    <input type="tel" id="input-1" maxlength="3" placeholder="_ _ _" class="w-full bg-slate-900 border-none text-center text-4xl font-bold py-3 outline-none text-green-400 font-digital tracking-widest">
+                    <button onclick="checkAnswer(1)" class="w-full mt-3 bg-slate-700 py-3 rounded-lg font-bold text-white shadow-lg active:scale-95 uppercase">SEND LOCATION</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEVEL 2: TURNTABLE -->
+        <div id="level-2" class="level-wrapper">
+            <div class="vinyl-glow-1"></div>
+            <div class="vinyl-glow-2"></div>
+            
+            <!-- כותרת ראשית של השלב -->
+            <h2 class="text-5xl font-black mb-6 font-serif-heading z-10 text-center" 
+                style="color: #4a044e; text-shadow: 0 2px 0 rgba(255,255,255,0.5);">
+                פלייליסט חתונה
+            </h2>
+            
+            <div class="turntable-card">
+                <div class="turntable-header">
+                    <div class="header-vinyl-icon">
+                        <div class="header-vinyl-inner"></div>
+                    </div>
+                    <div>
+                        <div class="text-slate-800 font-bold text-xl leading-tight">Evyatar Banai</div>
+                        <div class="text-slate-500 text-sm font-medium">Greatest Hits</div>
+                    </div>
+                </div>
+                
+                <div id="playlist-container">
+                    <!-- פריטים יתווספו דינמית כאן -->
+                </div>
+                
+                <div class="turntable-footer">
+                    <!-- האינפוט יופיע מצד ימין (בעברית) -->
+                    <input type="tel" id="input-2" maxlength="5" placeholder="קוד השיר" class="input-vinyl">
+                    
+                    <!-- הכפתור יופיע משמאל -->
+                    <button onclick="checkAnswer(2)" class="btn-vinyl">
+                        <i data-lucide="check" class="w-8 h-8 stroke-[3]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEVEL 3: 3D MIXER (REDESIGNED BOARD) -->
+        <div id="level-3" class="level-wrapper">
+            <div id="level-3-bg">
+                <div class="neon-ball bg-purple-500 w-64 h-64 top-0 left-0 opacity-25"></div>
+                <div class="neon-ball bg-indigo-500 w-80 h-80 bottom-0 right-0 opacity-25" style="animation-delay: -3s"></div>
+                <div class="neon-ball bg-pink-500 w-48 h-48 top-10 right-20 opacity-20" style="animation-delay: -1.5s"></div>
+            </div>
+
+            <div class="dance-floor-scene">
+                <div class="laser-beam"></div>
+                <div class="laser-beam"></div>
+                <div class="laser-beam"></div>
+                <div class="dance-floor-ground"></div>
+                <div class="floor-spot"></div>
+                
+                <div class="station station-left"><div class="cart-box">🌭</div></div>
+                <div class="station station-right">
+                    <div class="bar-counter">
+                        <div class="bottle bg-red-500"></div>
+                        <div class="bottle bg-green-500"></div>
+                        <div class="bottle bg-yellow-500"></div>
+                    </div>
+                </div>
+                
+                <div class="crowd-layer-back">
+                    <div class="dancer"></div><div class="dancer"></div><div class="dancer"></div><div class="dancer"></div><div class="dancer"></div>
+                </div>
+                <div class="crowd-layer">
+                    <div class="dancer"></div><div class="dancer"></div><div class="dancer"></div><div class="dancer"></div><div class="dancer"></div><div class="dancer"></div><div class="dancer"></div>
+                </div>
+                <div class="stage-barrier"></div>
+            </div>
+            
+            <div class="absolute top-12 z-30 bg-black/60 backdrop-blur border border-slate-600 px-6 py-3 rounded-2xl text-center max-w-md">
+                <h2 class="text-2xl font-black text-white mb-1">איפה אתה אבי</h2>
+                <p class="text-sm text-slate-300 font-medium leading-tight">"אבי תורג'מן הלך לאכול נקניקייה בלחמנייה ומישהו צריך להחליף אותו על העמדה. עזרי לכוון את הכפתורים"</p>
+            </div>
+
+            <div class="booth-container">
+                <div class="dj-board">
+                    
+                    <!-- === MAIN ROW: Screen+Keys LEFT | Faders RIGHT === -->
+                    <div class="board-main-row">
+                        
+                        <!-- Screen Unit (left side) -->
+                        <div class="screen-unit">
+                            <div class="monitor-frame">
+                                <div class="monitor-overlay">
+                                    <span id="status-text">SYNCING...</span>
+                                    <span>120 BPM</span>
+                                </div>
+                                <div class="monitor-display" id="monitor-bars">
+                                    <!-- bars generated by JS -->
+                                </div>
+                                <div class="waveform-line" id="waveform">
+                                    <!-- dots generated by JS -->
+                                </div>
+                            </div>
+                            <div class="keyboard-unit" id="keyboard-keys">
+                                <!-- keys generated by JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Faders (right side) -->
+                        <div class="faders-column">
+                            <div class="slider-wrapper cycling" id="wrap-1">
+                                <div class="slider-glow"></div>
+                                <div class="digital-val" id="val-1">1</div>
+                                <div class="slider-track">
+                                    <input type="range" id="range-1" min="1" max="150" value="1" oninput="updateMixerUI()">
+                                    <div class="fader-cap" id="handle-1" style="bottom: 0%"></div>
+                                </div>
+                                <div class="flex gap-1">
+                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(1,1)">+</button>
+                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(1,-1)">-</button>
+                                </div>
+                            </div>
+                            <div class="slider-wrapper cycling" id="wrap-2">
+                                <div class="slider-glow"></div>
+                                <div class="digital-val" id="val-2">1</div>
+                                <div class="slider-track">
+                                    <input type="range" id="range-2" min="1" max="35" value="1" oninput="updateMixerUI()">
+                                    <div class="fader-cap" id="handle-2" style="bottom: 0%"></div>
+                                </div>
+                                <div class="flex gap-1">
+                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(2,1)">+</button>
+                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(2,-1)">-</button>
+                                </div>
+                            </div>
+                            <div class="slider-wrapper cycling" id="wrap-3">
+                                <div class="slider-glow"></div>
+                                <div class="digital-val" id="val-3">1</div>
+                                <div class="slider-track">
+                                    <input type="range" id="range-3" min="1" max="21" value="1" oninput="updateMixerUI()">
+                                    <div class="fader-cap" id="handle-3" style="bottom: 0%"></div>
+                                </div>
+                                <div class="flex gap-1">
+                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(3,1)">+</button>
+                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(3,-1)">-</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- Jog wheels row -->
+                    <div class="flex justify-between items-center px-6">
+                        <div class="jog-wheel"></div>
+                        <div class="jog-wheel"></div>
+                    </div>
+
+                    <!-- Pads -->
+                    <div class="pad-grid" id="pad-container"></div>
+                    
+                    <button onclick="checkAnswer(3)" class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold py-2 rounded shadow border border-orange-400 uppercase tracking-widest text-xs">Check Sync</button>
+                </div>
+            </div>
+        </div>
+        <!-- ====================================== -->
+        <!--  LEVEL 4: WORDLOLA (THE SECRET CODE)   -->
+        <!-- ====================================== -->
+        <div id="level-4" class="level-wrapper">
+            <div class="toast-msg" id="wordle-toast">מילה לא קיימת במילון</div>
+            
+            <!-- Wordle Header -->
+            <div class="text-center mb-4 z-10">
+                <div class="flex items-center justify-center gap-2 mb-1">
+                    <i data-lucide="graduation-cap" class="text-[#D4AF37] w-8 h-8"></i>
+                    <h2 class="text-4xl font-serif-heading font-black text-[#2F4F2F]">Wordlol</h2>
+                </div>
+            </div>
+
+            <!-- Game Board -->
+            <div class="wordle-board" id="wordle-grid"></div>
+
+            <!-- Keyboard -->
+            <div class="wordle-keyboard" id="wordle-keyboard"></div>
+
+            <!-- Wordle Success Modal -->
+            <div id="wordle-win-wrapper" class="absolute inset-0 bg-white/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+                <div id="wordle-win-modal" class="w-11/12 max-w-sm">
+                    <h3 class="text-3xl font-bold text-[#2F4F2F] mb-2 font-serif-heading">בול פגיעה!</h3>
+                    <button onclick="handleSuccess()" class="btn-botanical w-full flex justify-center items-center gap-2">
+                        לשלב הבא <i data-lucide="arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================== -->
+    <!--  SCREEN 5: VICTORY                     -->
+    <!-- ====================================== -->
+    <div id="screen-victory" class="screen bg-[#FDFCF8]">
+        <div class="botanical-card text-center border-2 border-[#C5A059]">
+            <i data-lucide="party-popper" class="w-16 h-16 text-[#C5A059] mx-auto mb-4 animate-bounce"></i>
+            <h1 class="font-serif-heading text-5xl mb-2 text-[#2F4F2F]">אפשר לנשום</h1>
+            <p class="text-xl text-[#8F9E8A] mb-8 font-medium">יונתן יגיע לחתונה</p>
+            <p class="text-xs font-bold text-[#8F9E8A] uppercase mb-2 tracking-widest">ניחוש מה הוא הביא לך כאות תודה?</p>
+            <div class="scratch-container" id="scratch-card-area">
+                
+                <!-- השכבה המוסתרת (הפרס) -->
+                <div class="scratch-content border border-[#C5A059]/30">
+                    <h2 class="font-serif-heading text-4xl text-[#2F4F2F] mb-2 font-black">אביתר בנאי</h2>
+                    <div class="flex justify-center gap-2 mt-2 text-[#C5A059] font-bold items-center">
+                        <i data-lucide="ticket" class="w-6 h-6"></i>
+                        <span class="text-xl">זוג כרטיסים להופעה!</span>
+                        <i data-lucide="ticket" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <!-- שכבת הציפוי (קנבס) -->
+                <canvas id="scratch-canvas" class="scratch-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    
+        // --- STATE CONFIG ---
+        const answers = { 1: '169', 2: '11285' }; 
+        const mixerTargets = [120, 28, 1];
+        const requiredOnPads = new Set([0, 3, 5]);
+    
+        let maxUnlocked = 1;
+        let currentHintLevel = 0;
+        let currentStage = 0;
+        let map;
+        let fadersLocked = false;
+        let padStates = Array(8).fill(true);
+        
+        // Updated Level Names
+        const levelNames = {
+            1: 'שלב 1: ניווט',
+            2: 'שלב 2: פלייליסט',
+            3: 'שלב 3: DJ',
+            4: 'שלב 4: Wordlol',
+            5: 'שלב 5: חופה!'
+        };
+    
+        // Updated Hints
+        const hintsData = {
+            1: ["איפה שגרנו", "איפה שהכרנו", "עכשיו ביחד"],
+            2: ["הזמן הוא המפתח", "הסדר הוא כרונולוגי", "מספר השיר קובע"],
+            3: ["הסטטיסטיקה קובעת", "אין כמו בבית", "הכפתור הימני: כשסופרים מהגדול לקטן"],
+            4: ["מה יונתן הביא לך?", "אירוע מוזיקלי", "5 אותיות, מתחיל ב-ה'"]
+        };
+    
+        const songsData = [
+            { id: 1, name: "מנגינה יקרה", duration: "03:06" }, { id: 2, name: "תתחנני אלי", duration: "15:11" },
+            { id: 3, name: "יש לי סיכוי", duration: "04:15" }, { id: 4, name: "אבות ובנים", duration: "09:58" },
+            { id: 5, name: "עד מחר", duration: "18:02" }, { id: 6, name: "כלום לא עצוב", duration: "04:03" },
+            { id: 7, name: "לילה כיום יאיר", duration: "03:12" }, { id: 8, name: "מתי נתנשק", duration: "05:01" },
+            { id: 9, name: "שמתי לי פודרה", duration: "03:33" }, { id: 10, name: "תיאטרון רוסי", duration: "16:55" },
+            { id: 11, name: "אבא", duration: "06:10" }, { id: 12, name: "פרגולה", duration: "05:30" }
+        ];
+    
+        // WORDLE VARS
+        const TARGET_WORD = "הופעה"; 
+        const MAX_GUESSES = 6;
+        let currentGuess = "";
+        let guesses = [];
+        let isWordleGameOver = false;
+    
+        // --- FUNCTIONS ---
+    
+        function updateMapPalette() {
+            const mapScreen = document.getElementById('screen-map');
+            const mapTitle = document.getElementById('map-title');
+            
+            // ניקוי כל הצבעים הקודמים
+            mapScreen.classList.remove('map-palette-1', 'map-palette-2', 'map-palette-3', 'map-palette-4');
+            
+            // איפוס צבע כותרת (כי שלב 3 משנה אותו ללבן)
+            if(mapTitle) mapTitle.style.color = '#8B5E3C';
+
+            // הוספת הצבע החדש לפי ההתקדמות
+            if (maxUnlocked === 1) {
+                mapScreen.classList.add('map-palette-1');
+            } else if (maxUnlocked === 2) {
+                mapScreen.classList.add('map-palette-2');
+            } else if (maxUnlocked === 3) {
+                mapScreen.classList.add('map-palette-3');
+                if(mapTitle) mapTitle.style.color = '#ffffff'; // כותרת לבנה לרקע כהה
+            } else {
+                // שלב 4 או 5
+                mapScreen.classList.add('map-palette-4');
+            }
+        }
+        function goToMap() {
+            hideAll();
+            document.getElementById('screen-map').classList.add('active');
+            updateMapDisplay();
+            updateMapPalette();
+        }
+    
+        function startCountdown(levelNum, callback) {
+            hideAll();
+            const cdScreen = document.getElementById('screen-countdown');
+            
+            // איפוס סגנונות רקע מיוחדים (כמו התבנית של שלב 4)
+            cdScreen.style.backgroundImage = '';
+            cdScreen.style.backgroundSize = '';
+
+            // הגדרת הצבע לפי השלב
+            if (levelNum === 1) {
+                cdScreen.style.background = 'var(--palette-bg-1)';
+            } else if (levelNum === 2) {
+                cdScreen.style.background = 'var(--palette-bg-2)';
+            } else if (levelNum === 3) {
+                cdScreen.style.background = 'var(--palette-bg-3)';
+            } else {
+                 // --- התיקון לשלב 4: רקע שמנת עם נקודות ---
+                cdScreen.style.backgroundColor = '#FDFBF7';
+                cdScreen.style.backgroundImage = 'radial-gradient(#E6EFE9 1px, transparent 1px)';
+                cdScreen.style.backgroundSize = '20px 20px';
+            }
+
+            cdScreen.classList.add('active');
+            document.getElementById('countdown-level-name').textContent = levelNames[levelNum] || '';
+            
+            let count = 3;
+            const cdText = document.getElementById('countdown-text');
+            cdText.textContent = count;
+            cdText.style.animation = 'none';
+            void cdText.offsetHeight; 
+            cdText.style.animation = 'countPop 0.8s ease-out';
+            
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    cdText.textContent = count;
+                    cdText.style.animation = 'none';
+                    void cdText.offsetHeight;
+                    cdText.style.animation = 'countPop 0.8s ease-out';
+                } else {
+                    clearInterval(interval);
+                    cdText.textContent = '!';
+                    setTimeout(callback, 600);
+                }
+            }, 900);
+        }
+    
+        const _startCountdown = startCountdown; 
+    
+        function showJourneyMap() {
+            hideAll();
+            document.getElementById('screen-map').classList.add('active');
+            updateMapDisplay();
+            // הוספנו את השורה הזו כדי לעדכן את צבעי הרקע:
+            updateMapPalette();
+        }
+        function updateMapDisplay() {
+            // לולאה רק עד 4 כי 5 הוחלף בחופה מיוחדת
+            for(let i=1; i<=4; i++) {
+                const el = document.getElementById(`node-${i}`);
+                if(!el) continue;
+                
+                el.classList.remove('locked', 'active', 'completed');
+                el.childNodes[0].textContent = i;
+                
+                if (i < maxUnlocked) { 
+                    el.classList.add('completed'); 
+                    el.childNodes[0].textContent = '✓';
+                }
+                else if (i === maxUnlocked) {
+                    el.classList.add('active');
+                }
+                else {
+                    el.classList.add('locked');
+                }
+            }
+            
+            const avatar = document.getElementById('groom-avatar');
+            const container = document.getElementById('journey-container');
+            
+            if (avatar && container) {
+                const containerRect = container.getBoundingClientRect();
+                let targetNode;
+
+                if (maxUnlocked === 5) {
+                    // --- הגענו לחופה! ---
+                    targetNode = document.getElementById('node-final');
+                    
+                    // הפעלת ריקוד ניצחון
+                    avatar.classList.add('avatar-dancing');
+                    
+                    // מעבר אוטומטי למסך הניצחון אחרי 2.5 שניות של ריקוד
+                    setTimeout(() => {
+                        handleVictory();
+                    }, 2500);
+
+                } else {
+                    // שלב רגיל
+                    targetNode = document.querySelector(`.node-${maxUnlocked}`);
+                    avatar.classList.remove('avatar-dancing');
+                }
+
+                if (targetNode) {
+                    const nodeRect = targetNode.getBoundingClientRect();
+                    // חישוב המיקום של האווטאר
+                    avatar.style.top = (nodeRect.top - containerRect.top - 60) + 'px';
+                    avatar.style.left = (nodeRect.left - containerRect.left + (maxUnlocked === 5 ? 50 : 5)) + 'px'; // תיקון אמצע לחופה
+                }
+            }
+        }
+        function enterLevel(lvl) {
+            if (lvl > maxUnlocked) return;
+            currentStage = lvl; 
+            currentHintLevel = 0;
+            
+            startCountdown(lvl, () => {
+                hideAll();
+                document.getElementById('screen-game').classList.add('active');
+                document.querySelectorAll('.level-wrapper').forEach(l => l.classList.remove('active-level'));
+                document.getElementById(`level-${lvl}`).classList.add('active-level');
+                document.getElementById('level-indicator').innerText = `שלב ${lvl}`;
+                document.getElementById('hint-box').classList.add('hidden');
+    
+                if (lvl === 1) initMapLevel();
+                if (lvl === 2) renderPlaylist();
+                if (lvl === 3) initMixer();
+                if (lvl === 4) initWordle();
+                
+                lucide.createIcons();
+            });
+        }
+    
+        function handleVictory() {
+            if(maxUnlocked >= 5) { 
+                hideAll();
+                document.getElementById('screen-victory').classList.add('active');
+                confetti({ particleCount: 300, spread: 100 });
+                
+                // --- הוסף שורה זו: הפעלת כרטיס הגירוד ---
+                setTimeout(initScratchCard, 100);
+            }
+        }
+    
+        function hideAll() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        }
+    
+        // --- LEVEL 1-3 LOGIC (Keep Exisitng) ---
+        function initMapLevel() {
+        setTimeout(() => {
+            // בודקים אם המפה כבר קיימת כדי לא ליצור אותה פעמיים
+            if(!map) {
+                
+                // 1. הגדרת המפה והמרכז שלה (שנה את המספרים למרכז האזור שלך)
+                map = L.map('leaflet-map', { zoomControl: false }).setView([32.02831001323778, 34.86129459121839], 13);
+                
+                // טעינת העיצוב של המפה
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+
+                // --- הוספת הנעצים (Markers) ---
+                
+                // נעץ מספר 1
+                L.marker([32.026036029416844, 34.85604601639856]) // הדבק כאן את הקואורדינטות
+                    .addTo(map)                
+                // נעץ מספר 2
+                L.marker([32.02528903069255, 34.85990100352485]) // הדבק כאן את הקואורדינטות
+                    .addTo(map)
+
+                // נעץ מספר 3
+                L.marker([32.02558589870765, 34.85206987466677]) 
+                    .addTo(map)
+                
+                // נעץ מספר 4
+                L.marker([32.02258377846593, 34.857502361656344]) 
+                    .addTo(map)
+                
+                // נעץ מספר 3
+                L.marker([32.021037715199164, 34.861115732338284]) 
+                    .addTo(map)
+
+                
+                // נעץ מספר 3
+                L.marker([32.0290164009868, 34.86076175048324]) 
+                    .addTo(map)
+
+                
+                // נעץ מספר 3
+                L.marker([32.029151504906025, 34.862778003502356]) 
+                    .addTo(map)
+                
+                // נעץ מספר 3
+                L.marker([32.02647733739419, 34.86667793533115]) 
+                    .addTo(map)
+                
+                // נעץ מספר 3
+                L.marker([32.02426641963215, 34.87096609936433]) 
+                    .addTo(map)
+                // נעץ מספר 3
+                L.marker([32.030620972192565, 34.85776570686943]) 
+                    .addTo(map)
+                
+                // נעץ מספר 3
+                L.marker([32.028691498793165, 34.85439733085349]) 
+                    .addTo(map)
+                
+                // נעץ מספר 3
+                L.marker([32.03368231990342, 34.855641505778294]) 
+                    .addTo(map)
+
+
+            }
+            // פקודה לרענון הגודל של המפה כדי שלא תיתקע
+            map.invalidateSize();
+        }, 300);
+    }
+    
+        function renderPlaylist() {
+            const container = document.getElementById('playlist-container');
+            container.innerHTML = '';
+            songsData.forEach(s => {
+                container.innerHTML += `<div class="playlist-item"><span class="song-num">${s.id}</span><span class="song-name">${s.name}</span><span class="song-dur">${s.duration}</span></div>`;
+            });
+        }
+    
+        function initMixer() {
+            fadersLocked = false;
+            padStates = Array(8).fill(true);
+            generateSoundBars();
+            generateKeys();
+            generatePads();
+            syncPadsUI();
+            document.getElementById('status-text').textContent = 'SYNCING...';
+            updateMixerUI();
+        }
+    
+        // --- HELPER FOR MIXER TO SAVE SPACE ---
+        function generateSoundBars() {
+            const d = document.getElementById('monitor-bars'); if(d) { d.innerHTML=''; for(let i=0;i<20;i++) { let b=document.createElement('div'); b.className='monitor-bar'; b.style.setProperty('--max-h',(40+Math.random()*55)+'%'); b.style.animationDelay=(Math.random()*0.5)+'s'; d.appendChild(b); }}
+            const w = document.getElementById('waveform'); if(w) { w.innerHTML=''; for(let i=0;i<60;i++) { let dot=document.createElement('div'); dot.className='wave-dot'; dot.style.setProperty('--wh',(2+Math.random()*12)+'px'); dot.style.animationDelay=(i*0.03)+'s'; w.appendChild(dot); }}
+        }
+        function generateKeys() {
+            const k=document.getElementById('keyboard-keys'); if(k){ k.innerHTML=''; for(let i=0;i<16;i++){ let b=document.createElement('div'); b.className='kb-key'; b.onclick=()=>{ b.classList.add('pressed'); setTimeout(()=>b.classList.remove('pressed'),200); }; k.appendChild(b); }}
+        }
+        function generatePads() {
+            const pc=document.getElementById('pad-container'); pc.innerHTML='';
+            const colors = ['bg-green-500', 'bg-yellow-400', 'bg-purple-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-500', 'bg-pink-500', 'bg-cyan-400'];
+            colors.forEach((c,i)=>{ let btn=document.createElement('button'); btn.id=`pad-${i}`; btn.className=`pad-btn ${c}`; btn.onclick=()=>togglePad(i); pc.appendChild(btn); });
+        }
+    
+        function syncPadsUI() {
+            for (let i = 0; i < 8; i++) {
+                const el = document.getElementById(`pad-${i}`);
+                if (padStates[i]) { el.classList.add('lit'); el.classList.remove('dim'); } 
+                else { el.classList.add('dim'); el.classList.remove('lit'); }
+            }
+        }
+    
+        function togglePad(i) {
+            padStates[i] = !padStates[i];
+            syncPadsUI();
+            if (fadersLocked) checkFinalVictory();
+        }
+    
+        function checkFinalVictory() {
+            let win = true;
+            for (let i = 0; i < 8; i++) { if (padStates[i] !== requiredOnPads.has(i)) win = false; }
+            if (win) setTimeout(() => handleSuccess(), 350);
+        }
+    
+        function updateMixerUI() {
+            const ranges = [[1,150],[1,35],[1,21]];
+            for(let i=1; i<=3; i++) {
+                const val = document.getElementById(`range-${i}`).value;
+                document.getElementById(`val-${i}`).innerText = val;
+                const h = document.getElementById(`handle-${i}`);
+                const min=ranges[i-1][0], max=ranges[i-1][1];
+                h.style.bottom = ((val-min)/(max-min))*100 + '%';
+            }
+        }
+        
+        function adjust(i,d) {
+            if(fadersLocked) return;
+            const el=document.getElementById(`range-${i}`);
+            el.value = Math.max(el.min, Math.min(el.max, parseInt(el.value)+d));
+            updateMixerUI();
+        }
+    
+        function checkAnswer(lvl) {
+            let correct = false;
+            if (lvl < 3) {
+                const val = document.getElementById(`input-${lvl}`).value.trim();
+                if (val === answers[lvl]) correct = true;
+            } else {
+                const v1=Number(document.getElementById('range-1').value), v2=Number(document.getElementById('range-2').value), v3=Number(document.getElementById('range-3').value);
+                if (v1===mixerTargets[0] && v2===mixerTargets[1] && v3===mixerTargets[2]) {
+                    fadersLocked = true;
+                    ['green','red','blue'].forEach((c,i)=>document.getElementById(`wrap-${i+1}`).className=`slider-wrapper locked-${c}`);
+                    document.getElementById('status-text').textContent = 'LOCKED ✓';
+                    checkFinalVictory();
+                    return;
+                }
+            }
+            if (correct) handleSuccess();
+            else {
+                const el = document.getElementById(`input-${lvl}`) || document.querySelector('.dj-board');
+                if(el) { el.classList.add('error-shake'); setTimeout(()=>el.classList.remove('error-shake'),400); }
+            }
+        }
+    
+        /* ============================ */
+        /*  LEVEL 4: WORDLOLA LOGIC     */
+        /* ============================ */
+        
+        function initWordle() {
+            currentGuess = ""; guesses = []; isWordleGameOver = false;
+            const grid = document.getElementById('wordle-grid'); grid.innerHTML = '';
+            for (let i = 0; i < MAX_GUESSES * 5; i++) {
+                const tile = document.createElement('div'); tile.className = 'wordle-tile'; tile.id = `tile-${i}`; grid.appendChild(tile);
+            }
+    
+            const kbContainer = document.getElementById('wordle-keyboard'); kbContainer.innerHTML = '';
+            const rows = ["קראטוןםפ", "שדגכעיחלךף", "זסבהנמצתץ"];
+            
+            rows.forEach((rowStr, idx) => {
+                const rowDiv = document.createElement('div'); rowDiv.className = 'kb-row';
+                if (idx === 2) {
+                    const enterBtn = document.createElement('button'); enterBtn.className = 'key-btn key-special';
+                    enterBtn.innerHTML = '<i data-lucide="check"></i>'; enterBtn.onclick = submitGuess; rowDiv.appendChild(enterBtn);
+                }
+                rowStr.split('').forEach(char => {
+                    const btn = document.createElement('button'); btn.className = 'key-btn'; btn.textContent = char; btn.dataset.key = char;
+                    btn.onclick = () => handleWordleInput(char); rowDiv.appendChild(btn);
+                });
+                if (idx === 2) {
+                    const backBtn = document.createElement('button'); backBtn.className = 'key-btn key-special';
+                    backBtn.innerHTML = '<i data-lucide="delete"></i>'; backBtn.onclick = deleteChar; rowDiv.appendChild(backBtn);
+                }
+                kbContainer.appendChild(rowDiv);
+            });
+        }
+    
+        function handleWordleInput(char) {
+            if (isWordleGameOver || currentGuess.length >= 5) return;
+            currentGuess += char; updateGrid();
+        }
+        function deleteChar() {
+            if (isWordleGameOver || currentGuess.length === 0) return;
+            currentGuess = currentGuess.slice(0, -1); updateGrid();
+        }
+        function updateGrid() {
+            const rowStart = guesses.length * 5;
+            for (let i = 0; i < 5; i++) {
+                const tile = document.getElementById(`tile-${rowStart + i}`);
+                const char = currentGuess[i] || "";
+                tile.textContent = char;
+                tile.classList.toggle('tile-filled', char !== "");
+            }
+        }
+    
+        async function submitGuess() {
+            if (isWordleGameOver || currentGuess.length !== 5) { if(currentGuess.length!==5) shakeRow(); return; }
+            
+            // Mock Validation with Fallback
+            const isValid = await checkWordValidity(currentGuess);
+            if (!isValid) { showToast("מילה לא מוכרת"); shakeRow(); return; }
+    
+            guesses.push(currentGuess);
+            flipTiles(guesses.length - 1, currentGuess.split(''), TARGET_WORD.split(''));
+    
+            if (currentGuess === TARGET_WORD) {
+                isWordleGameOver = true;
+                setTimeout(() => {
+                    confetti({ particleCount: 400, spread: 120 });
+                    document.getElementById('wordle-win-wrapper').classList.remove('hidden');
+                }, 1600);
+            } else if (guesses.length >= MAX_GUESSES) {
+                isWordleGameOver = true;
+                showToast("לא נורא, נסה שוב...");
+                setTimeout(initWordle, 2000);
+            }
+            currentGuess = "";
+        }
+    
+        async function checkWordValidity(word) {
+            // Always return true in this demo version to prevent getting stuck
+            return true; 
+        }
+    
+        function flipTiles(rowIdx, guessArr, targetArr) {
+            const rowStart = rowIdx * 5;
+            let tempTarget = [...targetArr];
+            
+            // Correct (Green)
+            guessArr.forEach((char, i) => {
+                if (char === tempTarget[i]) {
+                    document.getElementById(`tile-${rowStart + i}`).classList.add('tile-correct');
+                    updateKeyboardColor(char, 'key-correct');
+                    tempTarget[i] = null; guessArr[i] = null;
+                }
+            });
+            // Present/Absent (Yellow/Gray)
+            guessArr.forEach((char, i) => {
+                if (!char) return;
+                const tile = document.getElementById(`tile-${rowStart + i}`);
+                if (tempTarget.includes(char)) {
+                    tile.classList.add('tile-present');
+                    updateKeyboardColor(char, 'key-present');
+                    tempTarget[tempTarget.indexOf(char)] = null;
+                } else {
+                    tile.classList.add('tile-absent');
+                    updateKeyboardColor(char, 'key-absent');
+                }
+                setTimeout(() => tile.classList.add('tile-flip'), i * 200);
+            });
+        }
+    
+        function updateKeyboardColor(char, cls) {
+            const btn = document.querySelector(`.key-btn[data-key="${char}"]`);
+            if (!btn || btn.classList.contains('key-correct')) return;
+            if (btn.classList.contains('key-present') && cls === 'key-absent') return;
+            btn.className = `key-btn ${cls}`;
+        }
+    
+        function shakeRow() {
+            const rowIdx = guesses.length, start = rowIdx * 5;
+            for (let i = 0; i < 5; i++) {
+                const tile = document.getElementById(`tile-${start + i}`);
+                tile.classList.add('error-shake');
+                setTimeout(() => tile.classList.remove('error-shake'), 400);
+            }
+        }
+    
+        function showToast(msg) {
+            const t = document.getElementById('wordle-toast'); t.innerText = msg; t.classList.add('toast-visible');
+            setTimeout(() => t.classList.remove('toast-visible'), 2000);
+        }
+    
+        // --- COMMON ---
+        function handleSuccess() {
+            document.getElementById('wordle-win-wrapper')?.classList.add('hidden');
+            if(currentStage === 4) { maxUnlocked=5; showJourneyMap(); return; }
+    
+            const flash = document.getElementById('success-flash');
+            
+            // כאן השינוי: החלפנו את text-white ב-text-slate-900
+            flash.className = 'absolute inset-0 z-[100] flex flex-col items-center justify-center text-slate-900 flex';
+            
+            if(currentStage === 1) flash.classList.add('flash-bg-1');
+            else if(currentStage === 2) flash.classList.add('flash-bg-2');
+            else flash.classList.add('flash-bg-3');
+            
+            setTimeout(() => {
+                flash.classList.add('hidden');
+                maxUnlocked = Math.max(maxUnlocked, currentStage + 1);
+                showJourneyMap();
+            }, 1500);
+        }
+    
+        function nextHint() {
+            if (currentHintLevel < 3) {
+                currentHintLevel++;
+                document.getElementById('hint-box')?.classList.remove('hidden');
+                document.getElementById('hint-num').innerText = currentHintLevel;
+                document.getElementById('hint-content').innerText = hintsData[currentStage][currentHintLevel - 1];
+            } else {
+                document.getElementById('hint-box')?.classList.add('hidden');
+                currentHintLevel = 0;
+            }
+        }
+    
+        function sendWhatsapp() { 
+            window.location.href = `https://wa.me/?text=${encodeURIComponent("אני אוהבת אותך זה המתנה הכי טובה שקיבלתי בחיים אתה מלך")}`; 
+        }
+                // --- לוגיקת כרטיס גירוד ---
+                function initScratchCard() {
+            const canvas = document.getElementById('scratch-canvas');
+            const container = document.getElementById('scratch-card-area');
+            
+            // בטיחות - אם לא קיים (למשל אם אנו לא במסך הנכון)
+            if (!canvas || !container) return;
+            
+            const ctx = canvas.getContext('2d');
+
+            // 1. קביעת גודל הקנבס לפי הגודל האמיתי במסך
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+
+            // 2. מילוי בצבע זהב (כיסוי)
+            ctx.fillStyle = '#C5A059'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 3. הוספת טקסט "גרדי אותי"
+            ctx.font = 'bold 24px Assistant';
+            ctx.fillStyle = '#FFF';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('גרדי כאן להפתעה!', canvas.width / 2, canvas.height / 2);
+
+            // 4. הוספת דוגמא לקישוט (פסים אלכסוניים)
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let i = -canvas.height; i < canvas.width; i+=20) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + canvas.height, canvas.height);
+            }
+            ctx.stroke();
+
+            // 5. לוגיקת המחיקה (גירוד)
+            let isDrawing = false;
+
+            function scratch(x, y) {
+                ctx.globalCompositeOperation = 'destination-out'; // מצב מחיקה
+                ctx.beginPath();
+                ctx.arc(x, y, 25, 0, Math.PI * 2); // גודל המחק
+                ctx.fill();
+            }
+
+            // אירועי עכבר (מחשב)
+            canvas.onmousedown = () => isDrawing = true;
+            canvas.onmouseup = () => isDrawing = false;
+            canvas.onmousemove = (e) => {
+                if (!isDrawing) return;
+                const rect = canvas.getBoundingClientRect();
+                scratch(e.clientX - rect.left, e.clientY - rect.top);
+            };
+
+            // אירועי מגע (טלפון)
+            canvas.ontouchstart = (e) => { isDrawing = true; e.preventDefault(); };
+            canvas.ontouchend = () => isDrawing = false;
+            canvas.ontouchmove = (e) => {
+                if (!isDrawing) return;
+                const rect = canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                scratch(touch.clientX - rect.left, touch.clientY - rect.top);
+            };
+        }
+    </script>
+</body>
+</html>
