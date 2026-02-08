@@ -1013,7 +1013,6 @@
             background: rgba(148, 163, 184, 0.4);
         }
         .tick-mark.major {
-            width: 100%;
             height: 2px;
             background: rgba(148, 163, 184, 0.7);
         }
@@ -1771,7 +1770,7 @@
                     </div>
                     
                     <!-- PLAY button -->
-                    <button onclick="checkAnswer(3)" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg border-2 border-green-400 uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:from-green-500 hover:to-emerald-500 transition-all active:scale-95">
+                    <button onclick="checkAnswer(3)" aria-label="Play DJ mix" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg border-2 border-green-400 uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:from-green-500 hover:to-emerald-500 transition-all active:scale-95">
                         <i data-lucide="play" class="w-6 h-6"></i>
                         PLAY
                     </button>
@@ -2194,7 +2193,7 @@
                 const val = document.getElementById(`input-${lvl}`).value.trim();
                 if (val === answers[lvl]) correct = true;
             } else {
-                // Level 3: Check if sliders are at exact target values
+                // Level 3 (DJ Level): Check if all three sliders match their target values (120, 28, 1)
                 const v1=Number(document.getElementById('range-1').value), v2=Number(document.getElementById('range-2').value), v3=Number(document.getElementById('range-3').value);
                 if (v1===mixerTargets[0] && v2===mixerTargets[1] && v3===mixerTargets[2]) {
                     correct = true;
