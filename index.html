@@ -1838,7 +1838,14 @@
     </div>
 
     <script>
-        lucide.createIcons();
+        // Try to initialize lucide icons if available
+        try {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        } catch(e) {
+            console.warn('Lucide icons not available:', e);
+        }
     
         // --- STATE CONFIG ---
         const answers = { 1: '169', 2: '11285' }; 
@@ -2042,7 +2049,14 @@
                 if (lvl === 3) initMixer();
                 if (lvl === 4) initWordle();
                 
-                lucide.createIcons();
+                // Initialize lucide icons if available
+                try {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                } catch(e) {
+                    console.warn('Lucide icons not available:', e);
+                }
             });
         }
     
