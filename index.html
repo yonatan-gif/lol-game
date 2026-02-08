@@ -856,7 +856,6 @@
             border-top: 1px solid rgba(255,255,255,0.08);
             padding: 8px 10px; display: flex; flex-direction: column; gap: 5px;
             margin-bottom: 20px;
-            /* Reduced height to ~3/4 of original */
             max-height: 320px;
         }
 
@@ -1770,8 +1769,8 @@
                     </div>
                     
                     <!-- PLAY button -->
-                    <button onclick="checkAnswer(3)" aria-label="Play DJ mix" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg border-2 border-green-400 uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:from-green-500 hover:to-emerald-500 transition-all active:scale-95">
-                        <i data-lucide="play" class="w-6 h-6"></i>
+                    <button onclick="checkAnswer(3)" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg border-2 border-green-400 uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:from-green-500 hover:to-emerald-500 transition-all active:scale-95">
+                        <i data-lucide="play" class="w-6 h-6" aria-hidden="true"></i>
                         PLAY
                     </button>
                 </div>
