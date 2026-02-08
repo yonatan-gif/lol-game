@@ -856,6 +856,8 @@
             border-top: 1px solid rgba(255,255,255,0.08);
             padding: 8px 10px; display: flex; flex-direction: column; gap: 5px;
             margin-bottom: 20px;
+            /* Reduced height to ~3/4 of original */
+            max-height: 320px;
         }
 
         /* === MAIN ROW: Screen + Faders side by side === */
@@ -983,7 +985,7 @@
 
         .faders-area { display: flex; align-items: flex-end; justify-content: center; gap: 8px; width: 100%; padding-bottom: 3px; }
         .slider-wrapper { width: 42px; background: #111; padding: 3px; border-radius: 5px; border: 2px solid #333; position: relative; display: flex; flex-direction: column; align-items: center; transition: border-color .2s ease, box-shadow .2s ease; }
-        .slider-track { width: 32px; height: 90px; background: #0f172a; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        .slider-track { width: 32px; height: 200px; background: #0f172a; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
         .slider-glow { position: absolute; inset: 0; opacity: 0.2; pointer-events: none; }
         .cycling .slider-glow { animation: cycleColor 2s infinite; }
         @keyframes cycleColor { 0% { background: red; } 33% { background: green; } 66% { background: blue; } 100% { background: red; } }
@@ -992,6 +994,29 @@
         .locked-blue { border-color: #3b82f6 !important; box-shadow: 0 0 10px #3b82f6; }
         .fader-cap { position: absolute; left: 2px; right: 2px; height: 18px; background: linear-gradient(#94a3b8, #475569); border-radius: 2px; pointer-events: none; z-index: 10; bottom: 0%; }
         input[type=range] { -webkit-appearance: slider-vertical; width: 100%; height: 100%; opacity: 0; position: absolute; top: 0; left: 0; z-index: 50; cursor: pointer; }
+        
+        /* Slider ticks */
+        .slider-ticks {
+            position: absolute;
+            left: -8px;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+        .tick-mark {
+            width: 100%;
+            height: 1px;
+            background: rgba(148, 163, 184, 0.4);
+        }
+        .tick-mark.major {
+            width: 100%;
+            height: 2px;
+            background: rgba(148, 163, 184, 0.7);
+        }
         .digital-val { font-family: 'Orbitron', monospace; font-size: 9px; color: #4ade80; text-align: center; padding: 2px 0; }
         
         /* Pads: IMPORTANT - do NOT override Tailwind bg-* with a fixed background */
@@ -1041,6 +1066,57 @@
             background: #666;
             border-radius: 50%;
             transform: translate(-50%, -50%);
+        }
+        
+        /* Decorative controls row */
+        .deco-controls {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            align-items: center;
+            padding: 4px 8px;
+            background: #0f172a;
+            border-radius: 4px;
+        }
+        
+        .deco-knob {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #555, #222);
+            border: 2px solid #444;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        
+        .deco-knob::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 8px;
+            background: #888;
+            border-radius: 1px;
+        }
+        
+        .deco-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(135deg, #444, #222);
+            border: 1px solid #555;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 3px rgba(0,0,0,0.4);
+        }
+        
+        .deco-led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            border: 1px solid #555;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
         }
 
         .slider-wrapper {
@@ -1606,6 +1682,17 @@
                                 <div class="slider-glow"></div>
                                 <div class="digital-val" id="val-1">1</div>
                                 <div class="slider-track">
+                                    <div class="slider-ticks">
+                                        <div class="tick-mark major"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark major"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark major"></div>
+                                    </div>
                                     <input type="range" id="range-1" min="1" max="150" value="1" oninput="updateMixerUI()">
                                     <div class="fader-cap" id="handle-1" style="bottom: 0%"></div>
                                 </div>
@@ -1618,6 +1705,17 @@
                                 <div class="slider-glow"></div>
                                 <div class="digital-val" id="val-2">1</div>
                                 <div class="slider-track">
+                                    <div class="slider-ticks">
+                                        <div class="tick-mark major"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark major"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark major"></div>
+                                    </div>
                                     <input type="range" id="range-2" min="1" max="35" value="1" oninput="updateMixerUI()">
                                     <div class="fader-cap" id="handle-2" style="bottom: 0%"></div>
                                 </div>
@@ -1630,6 +1728,17 @@
                                 <div class="slider-glow"></div>
                                 <div class="digital-val" id="val-3">1</div>
                                 <div class="slider-track">
+                                    <div class="slider-ticks">
+                                        <div class="tick-mark major"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark major"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark"></div>
+                                        <div class="tick-mark major"></div>
+                                    </div>
                                     <input type="range" id="range-3" min="1" max="21" value="1" oninput="updateMixerUI()">
                                     <div class="fader-cap" id="handle-3" style="bottom: 0%"></div>
                                 </div>
@@ -1642,16 +1751,30 @@
                         
                     </div>
                     
+                    <!-- Decorative controls row -->
+                    <div class="deco-controls">
+                        <div class="deco-knob"></div>
+                        <div class="deco-knob"></div>
+                        <div class="deco-btn"></div>
+                        <div class="deco-btn"></div>
+                        <div class="deco-led"></div>
+                        <div class="deco-led"></div>
+                        <div class="deco-knob"></div>
+                        <div class="deco-btn"></div>
+                        <div class="deco-knob"></div>
+                    </div>
+                    
                     <!-- Jog wheels row -->
                     <div class="flex justify-between items-center px-6">
                         <div class="jog-wheel"></div>
                         <div class="jog-wheel"></div>
                     </div>
-
-                    <!-- Pads -->
-                    <div class="pad-grid" id="pad-container"></div>
                     
-                    <button onclick="checkAnswer(3)" class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold py-2 rounded shadow border border-orange-400 uppercase tracking-widest text-xs">Check Sync</button>
+                    <!-- PLAY button -->
+                    <button onclick="checkAnswer(3)" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg border-2 border-green-400 uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:from-green-500 hover:to-emerald-500 transition-all active:scale-95">
+                        <i data-lucide="play" class="w-6 h-6"></i>
+                        PLAY
+                    </button>
                 </div>
             </div>
         </div>
@@ -1720,14 +1843,11 @@
         // --- STATE CONFIG ---
         const answers = { 1: '169', 2: '11285' }; 
         const mixerTargets = [120, 28, 1];
-        const requiredOnPads = new Set([0, 3, 5]);
     
         let maxUnlocked = 1;
         let currentHintLevel = 0;
         let currentStage = 0;
         let map;
-        let fadersLocked = false;
-        let padStates = Array(8).fill(true);
         
         // Updated Level Names
         const levelNames = {
@@ -2022,13 +2142,9 @@
         }
     
         function initMixer() {
-            fadersLocked = false;
-            padStates = Array(8).fill(true);
             generateSoundBars();
             generateKeys();
-            generatePads();
-            syncPadsUI();
-            document.getElementById('status-text').textContent = 'SYNCING...';
+            document.getElementById('status-text').textContent = 'READY';
             updateMixerUI();
         }
     
@@ -2039,31 +2155,6 @@
         }
         function generateKeys() {
             const k=document.getElementById('keyboard-keys'); if(k){ k.innerHTML=''; for(let i=0;i<16;i++){ let b=document.createElement('div'); b.className='kb-key'; b.onclick=()=>{ b.classList.add('pressed'); setTimeout(()=>b.classList.remove('pressed'),200); }; k.appendChild(b); }}
-        }
-        function generatePads() {
-            const pc=document.getElementById('pad-container'); pc.innerHTML='';
-            const colors = ['bg-green-500', 'bg-yellow-400', 'bg-purple-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-500', 'bg-pink-500', 'bg-cyan-400'];
-            colors.forEach((c,i)=>{ let btn=document.createElement('button'); btn.id=`pad-${i}`; btn.className=`pad-btn ${c}`; btn.onclick=()=>togglePad(i); pc.appendChild(btn); });
-        }
-    
-        function syncPadsUI() {
-            for (let i = 0; i < 8; i++) {
-                const el = document.getElementById(`pad-${i}`);
-                if (padStates[i]) { el.classList.add('lit'); el.classList.remove('dim'); } 
-                else { el.classList.add('dim'); el.classList.remove('lit'); }
-            }
-        }
-    
-        function togglePad(i) {
-            padStates[i] = !padStates[i];
-            syncPadsUI();
-            if (fadersLocked) checkFinalVictory();
-        }
-    
-        function checkFinalVictory() {
-            let win = true;
-            for (let i = 0; i < 8; i++) { if (padStates[i] !== requiredOnPads.has(i)) win = false; }
-            if (win) setTimeout(() => handleSuccess(), 350);
         }
     
         function updateMixerUI() {
@@ -2078,7 +2169,6 @@
         }
         
         function adjust(i,d) {
-            if(fadersLocked) return;
             const el=document.getElementById(`range-${i}`);
             el.value = Math.max(el.min, Math.min(el.max, parseInt(el.value)+d));
             updateMixerUI();
@@ -2090,13 +2180,12 @@
                 const val = document.getElementById(`input-${lvl}`).value.trim();
                 if (val === answers[lvl]) correct = true;
             } else {
+                // Level 3: Check if sliders are at exact target values
                 const v1=Number(document.getElementById('range-1').value), v2=Number(document.getElementById('range-2').value), v3=Number(document.getElementById('range-3').value);
                 if (v1===mixerTargets[0] && v2===mixerTargets[1] && v3===mixerTargets[2]) {
-                    fadersLocked = true;
+                    correct = true;
                     ['green','red','blue'].forEach((c,i)=>document.getElementById(`wrap-${i+1}`).className=`slider-wrapper locked-${c}`);
-                    document.getElementById('status-text').textContent = 'LOCKED ✓';
-                    checkFinalVictory();
-                    return;
+                    document.getElementById('status-text').textContent = 'SYNCED ✓';
                 }
             }
             if (correct) handleSuccess();
