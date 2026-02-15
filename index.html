@@ -424,7 +424,7 @@
             background-image: radial-gradient(#E6EFE9 1px, transparent 1px); 
             background-size: 20px 20px; 
         }
-        .journey-container { position: relative; width: 100%; max-width: 400px; height: 75vh; }
+        .journey-container { position: relative; width: 100%; max-width: 400px; height: 75vh; overflow: hidden; }
         .map-node {
             width: 65px; height: 65px; border-radius: 50%; background: white;
             border: 3px solid #E2E8F0; display: flex; align-items: center; justify-content: center;
@@ -843,14 +843,13 @@
             position: absolute; bottom: 0; left: 0; width: 100%; height: 48%;
             perspective: 900px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 10px; z-index: 20;
         }
-
         .dj-board {
             width: 96%; max-width: 600px; height: auto;
             background: linear-gradient(180deg, #3d4a5c 0%, #2a3444 40%, #1e293b 100%);
             border-radius: 10px 10px 6px 6px;
-            /* FIXED: Lower angle and preserve-3d for clicks */
+            /* FIX: שינוי מ-preserve-3d ל-flat כדי שהלחיצות יעבדו */
             transform: rotateX(20deg); 
-            transform-style: preserve-3d;
+            transform-style: flat;
             box-shadow: 0 25px 50px rgba(0,0,0,0.7), 0 8px 0 #0f172a, inset 0 1px 0 rgba(255,255,255,0.1);
             border-bottom: 5px solid #0f172a;
             border-top: 1px solid rgba(255,255,255,0.08);
@@ -974,17 +973,88 @@
         .kb-key.pressed { background: #22c55e; box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
         
         /* סליידרים בצד ימין */
+              /* סליידרים בצד ימין - מעודכן וגדול */
         .faders-column {
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            gap: 6px;
+            gap: 15px; /* רווח גדול יותר */
+            height: 100%;
+            padding-bottom: 10px;
         }
 
-        .faders-area { display: flex; align-items: flex-end; justify-content: center; gap: 8px; width: 100%; padding-bottom: 3px; }
-        .slider-wrapper { width: 42px; background: #111; padding: 3px; border-radius: 5px; border: 2px solid #333; position: relative; display: flex; flex-direction: column; align-items: center; transition: border-color .2s ease, box-shadow .2s ease; }
-        .slider-track { width: 32px; height: 90px; background: #0f172a; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        .slider-wrapper { 
+            width: auto; /* רוחב גמיש כדי להכיל מספרים */
+            background: #111; 
+            padding: 8px; 
+            border-radius: 8px; 
+            border: 2px solid #333; 
+            position: relative; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        /* מארז חדש: סליידר מימין, מספרים משמאל */
+        .slider-inner-layout {
+            display: flex;
+            flex-direction: row; 
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        /* המסלול עצמו - גבוה ורחב הרבה יותר */
+        .slider-track { 
+            width: 50px; /* רחב */
+            height: 120px; /* גבוה */
+            background: #0f172a; 
+            border-radius: 6px; 
+            position: relative; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); 
+        }
+
         .slider-glow { position: absolute; inset: 0; opacity: 0.2; pointer-events: none; }
+
+        /* הכפתור (ידית) - גדול יותר */
+        .fader-cap { 
+            position: absolute; 
+            left: 0; right: 0; 
+            height: 40px; /* ידית גדולה */
+            background: linear-gradient(180deg, #94a3b8 0%, #475569 50%, #1e293b 100%); 
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 1px solid #0f172a;
+            border-radius: 4px; 
+            pointer-events: none; 
+            z-index: 10; 
+            transform: translateY(50%); /* מרכוז הידית */
+            bottom: 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+        
+        /* דקורציה לידית */
+        .fader-cap::after {
+            content: ''; position: absolute; top: 50%; left: 10%; right: 10%; height: 2px; background: #000; opacity: 0.5;
+        }
+
+        /* שנתות (מספרים בצד) */
+        .slider-ticks {
+            display: flex;
+            flex-direction: column-reverse; /* מלמטה למעלה */
+            justify-content: space-between;
+            height: 120px; 
+            padding: 20px 0; /* מרווח בקצוות כדי שיתאים לידית */
+        }
+
+        .tick-mark {
+            font-family: 'Orbitron', monospace;
+            font-size: 9px;
+            color: #64748b;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .tick-mark::before { content: '-'; margin-right: 4px; color: #475569; }.slider-glow { position: absolute; inset: 0; opacity: 0.2; pointer-events: none; }
         .cycling .slider-glow { animation: cycleColor 2s infinite; }
         @keyframes cycleColor { 0% { background: red; } 33% { background: green; } 66% { background: blue; } 100% { background: red; } }
         .locked-green { border-color: #22c55e !important; box-shadow: 0 0 10px #22c55e; }
@@ -998,8 +1068,7 @@
         .pad-grid { 
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; 
             background: #0f172a; border-radius: 4px; margin-top: auto; 
-            /* FIXED: Lift up for clicks */
-            transform: translateZ(10px); 
+            /* FIX: הסרנו את translateZ כי לא צריך יותר */
             position: relative;
             z-index: 50; 
         }
@@ -1265,11 +1334,11 @@
         @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
         @keyframes avatarVictoryDance {
-            0% { transform: translate(-50%, -60px) scale(1) rotate(0deg); }
-            25% { transform: translate(-50%, -90px) scale(1.1) rotate(-15deg); } /* קפיצה שמאלה */
-            50% { transform: translate(-50%, -60px) scale(1) rotate(0deg); } /* נחיתה */
-            75% { transform: translate(-50%, -90px) scale(1.1) rotate(15deg); } /* קפיצה ימינה */
-            100% { transform: translate(-50%, -60px) scale(1) rotate(0deg); }
+            0% { transform: translate(-50%, -30px) scale(1) rotate(0deg); }
+            25% { transform: translate(-50%, -45px) scale(1.15) rotate(-15deg); }
+            50% { transform: translate(-50%, -30px) scale(1) rotate(0deg); }
+            75% { transform: translate(-50%, -45px) scale(1.15) rotate(15deg); }
+            100% { transform: translate(-50%, -30px) scale(1) rotate(0deg); }
         }
         
         .avatar-dancing {
@@ -1572,86 +1641,97 @@
             
             <div class="absolute top-12 z-30 bg-black/60 backdrop-blur border border-slate-600 px-6 py-3 rounded-2xl text-center max-w-md">
                 <h2 class="text-2xl font-black text-white mb-1">איפה אתה אבי</h2>
-                <p class="text-sm text-slate-300 font-medium leading-tight">"אבי תורג'מן הלך לאכול נקניקייה בלחמנייה ומישהו צריך להחליף אותו על העמדה. עזרי לכוון את הכפתורים"</p>
+                <p class="text-sm text-slate-300 font-medium leading-tight">"אבי תורג'מן הלך לאכול נקניקייה בלחמנייה ומישהו צריך להחליף אותו על העמדה. עזרי לכוון את הסליידרים"</p>
             </div>
 
             <div class="booth-container">
-                <div class="dj-board">
-                    
-                    <!-- === MAIN ROW: Screen+Keys LEFT | Faders RIGHT === -->
-                    <div class="board-main-row">
+                <div class="dj-board" style="transform: rotateX(20deg); height: auto; min-height: 320px; aspect-ratio: auto; padding: 15px;">
+                    <div class="board-main-row" style="height: 100%; display: flex; align-items: flex-end;">
                         
-                        <!-- Screen Unit (left side) -->
-                        <div class="screen-unit">
-                            <div class="monitor-frame">
+                        <!-- 1. Faders (LEFT side) -->
+                        <div class="faders-column" style="margin-right: 20px; flex: 0 0 auto;">
+                    
+                            <!-- SLIDER 1 -->
+                            <div class="slider-wrapper cycling" id="wrap-1" style="width: 80px; padding: 10px 0;">
+                                <div class="digital-val" id="val-1" style="margin-bottom: 5px;">1</div>
+                                <div class="slider-inner-layout" style="display: flex; justify-content: center; position: relative; height: 180px;">
+                                    <div class="slider-track" style="height: 100%; width: 44px; background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 4px; overflow: visible;"> 
+                                        <div class="slider-glow"></div>
+                                        <input type="range" id="range-1" min="1" max="150" value="1" oninput="updateMixerUI()" 
+                                               style="opacity: 0; width: 100%; height: 100%; position: absolute; left: 0; top: 0; z-index: 50; cursor: pointer; margin: 0; padding: 0;">
+                                        <div class="fader-cap" id="handle-1" style="left: 0; width: 100%; height: 20px;"></div> 
+                                    </div>
+                                    <div class="slider-ticks" id="ticks-1" style="position: absolute; left: -5px; top: 0; height: 100%; display: flex; flex-direction: column-reverse; justify-content: space-between; color: #cbd5e1; font-size: 10px; font-weight: bold; pointer-events: none; width: 20px; text-align: right;"></div>
+                                </div>
+                                <div style="position: relative; z-index: 100; display: flex; gap: 4px; margin-top: 12px; justify-content: center;">
+                                    <button class="text-white text-[10px] bg-slate-700 w-7 h-7 rounded active:scale-90 transition-transform" onclick="event.stopPropagation(); adjust(1, 1)">+</button>
+                                    <button class="text-white text-[10px] bg-slate-700 w-7 h-7 rounded active:scale-90 transition-transform" onclick="event.stopPropagation(); adjust(1, -1)">-</button>
+                                </div>
+                            </div>
+        
+                            <!-- SLIDER 2 -->
+                            <div class="slider-wrapper cycling" id="wrap-2" style="width: 80px; padding: 10px 0;">
+                                <div class="digital-val" id="val-2" style="margin-bottom: 5px;">1</div>
+                                <div class="slider-inner-layout" style="display: flex; justify-content: center; position: relative; height: 180px;">
+                                    <div class="slider-track" style="height: 100%; width: 44px; background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 4px; overflow: visible;">
+                                        <div class="slider-glow"></div>
+                                        <input type="range" id="range-2" min="1" max="35" value="1" oninput="updateMixerUI()" 
+                                               style="opacity: 0; width: 100%; height: 100%; position: absolute; left: 0; top: 0; z-index: 50; cursor: pointer; margin: 0; padding: 0;">
+                                        <div class="fader-cap" id="handle-2" style="left: 0; width: 100%; height: 20px;"></div>
+                                    </div>
+                                    <div class="slider-ticks" id="ticks-2" style="position: absolute; left: -5px; top: 0; height: 100%; display: flex; flex-direction: column-reverse; justify-content: space-between; color: #cbd5e1; font-size: 10px; font-weight: bold; pointer-events: none; width: 20px; text-align: right;"></div>
+                                </div>
+                                <div style="position: relative; z-index: 100; display: flex; gap: 4px; margin-top: 12px; justify-content: center;">
+                                    <button class="text-white text-[10px] bg-slate-700 w-7 h-7 rounded active:scale-90 transition-transform" onclick="event.stopPropagation(); adjust(2, 1)">+</button>
+                                    <button class="text-white text-[10px] bg-slate-700 w-7 h-7 rounded active:scale-90 transition-transform" onclick="event.stopPropagation(); adjust(2, -1)">-</button>
+                                </div>
+                            </div>
+        
+                            <!-- SLIDER 3 -->
+                            <div class="slider-wrapper cycling" id="wrap-3" style="width: 80px; padding: 10px 0;">
+                                <div class="digital-val" id="val-3" style="margin-bottom: 5px;">1</div>
+                                <div class="slider-inner-layout" style="display: flex; justify-content: center; position: relative; height: 180px;">
+                                    <div class="slider-track" style="height: 100%; width: 44px; background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 4px; overflow: visible;">
+                                        <div class="slider-glow"></div>
+                                        <input type="range" id="range-3" min="1" max="21" value="1" oninput="updateMixerUI()" 
+                                               style="opacity: 0; width: 100%; height: 100%; position: absolute; left: 0; top: 0; z-index: 50; cursor: pointer; margin: 0; padding: 0;">
+                                        <div class="fader-cap" id="handle-3" style="left: 0; width: 100%; height: 20px;"></div>
+                                    </div>
+                                    <div class="slider-ticks" id="ticks-3" style="position: absolute; left: -5px; top: 0; height: 100%; display: flex; flex-direction: column-reverse; justify-content: space-between; color: #cbd5e1; font-size: 10px; font-weight: bold; pointer-events: none; width: 20px; text-align: right;"></div>
+                                </div>
+                                <div style="position: relative; z-index: 100; display: flex; gap: 4px; margin-top: 12px; justify-content: center;">
+                                    <button class="text-white text-[10px] bg-slate-700 w-7 h-7 rounded active:scale-90 transition-transform" onclick="event.stopPropagation(); adjust(3, 1)">+</button>
+                                    <button class="text-white text-[10px] bg-slate-700 w-7 h-7 rounded active:scale-90 transition-transform" onclick="event.stopPropagation(); adjust(3, -1)">-</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 2. Screen Unit (RIGHT side) -->
+                        <div class="screen-unit" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                            <!-- המסך -->
+                            <div class="monitor-frame" style="height: 130px; margin-bottom: 8px;">
                                 <div class="monitor-overlay">
                                     <span id="status-text">SYNCING...</span>
                                     <span>120 BPM</span>
                                 </div>
-                                <div class="monitor-display" id="monitor-bars">
-                                    <!-- bars generated by JS -->
-                                </div>
-                                <div class="waveform-line" id="waveform">
-                                    <!-- dots generated by JS -->
-                                </div>
+                                <div class="monitor-display" id="monitor-bars"></div>
+                                <div class="waveform-line" id="waveform"></div>
                             </div>
-                            <div class="keyboard-unit" id="keyboard-keys">
-                                <!-- keys generated by JS -->
-                            </div>
-                        </div>
-                        
-                        <!-- Faders (right side) -->
-                        <div class="faders-column">
-                            <div class="slider-wrapper cycling" id="wrap-1">
-                                <div class="slider-glow"></div>
-                                <div class="digital-val" id="val-1">1</div>
-                                <div class="slider-track">
-                                    <input type="range" id="range-1" min="1" max="150" value="1" oninput="updateMixerUI()">
-                                    <div class="fader-cap" id="handle-1" style="bottom: 0%"></div>
-                                </div>
-                                <div class="flex gap-1">
-                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(1,1)">+</button>
-                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(1,-1)">-</button>
-                                </div>
-                            </div>
-                            <div class="slider-wrapper cycling" id="wrap-2">
-                                <div class="slider-glow"></div>
-                                <div class="digital-val" id="val-2">1</div>
-                                <div class="slider-track">
-                                    <input type="range" id="range-2" min="1" max="35" value="1" oninput="updateMixerUI()">
-                                    <div class="fader-cap" id="handle-2" style="bottom: 0%"></div>
-                                </div>
-                                <div class="flex gap-1">
-                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(2,1)">+</button>
-                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(2,-1)">-</button>
-                                </div>
-                            </div>
-                            <div class="slider-wrapper cycling" id="wrap-3">
-                                <div class="slider-glow"></div>
-                                <div class="digital-val" id="val-3">1</div>
-                                <div class="slider-track">
-                                    <input type="range" id="range-3" min="1" max="21" value="1" oninput="updateMixerUI()">
-                                    <div class="fader-cap" id="handle-3" style="bottom: 0%"></div>
-                                </div>
-                                <div class="flex gap-1">
-                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(3,1)">+</button>
-                                    <button class="text-white text-[8px] bg-gray-700 w-4 rounded" onclick="adjust(3,-1)">-</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                    </div>
-                    
-                    <!-- Jog wheels row -->
-                    <div class="flex justify-between items-center px-6">
-                        <div class="jog-wheel"></div>
-                        <div class="jog-wheel"></div>
-                    </div>
+                            
+                            <!-- מקלדת שייכת למסך -->
+                            <div class="keyboard-unit" id="keyboard-keys" style="margin-bottom: 10px;"></div>
 
-                    <!-- Pads -->
-                    <div class="pad-grid" id="pad-container"></div>
-                    
-                    <button onclick="checkAnswer(3)" class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold py-2 rounded shadow border border-orange-400 uppercase tracking-widest text-xs">Check Sync</button>
+                            <!-- גלגלים בצדדים -->
+                            <div class="flex justify-between items-center px-4 mb-2">
+                                <div class="jog-wheel" style="width: 35px; height: 35px;"></div>
+                                <div class="jog-wheel" style="width: 35px; height: 35px;"></div>
+                            </div>
+
+                            <!-- כפתור בדיקה מלבני וקטן למטה -->
+                            <button onclick="checkAnswer(3)" style="margin-top: auto;" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-1 px-4 rounded shadow-md border-b-4 border-orange-800 active:border-b-0 active:translate-y-1 uppercase tracking-widest text-[10px] h-8 flex items-center justify-center">
+                                SYNC / CHECK
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1719,15 +1799,13 @@
     
         // --- STATE CONFIG ---
         const answers = { 1: '169', 2: '11285' }; 
-        const mixerTargets = [120, 28, 1];
-        const requiredOnPads = new Set([0, 3, 5]);
+        const mixerTargets = [120, 28, 3];
     
         let maxUnlocked = 1;
         let currentHintLevel = 0;
         let currentStage = 0;
         let map;
         let fadersLocked = false;
-        let padStates = Array(8).fill(true);
         
         // Updated Level Names
         const levelNames = {
@@ -1742,8 +1820,8 @@
         const hintsData = {
             1: ["איפה שגרנו", "איפה שהכרנו", "עכשיו ביחד"],
             2: ["הזמן הוא המפתח", "הסדר הוא כרונולוגי", "מספר השיר קובע"],
-            3: ["הסטטיסטיקה קובעת", "אין כמו בבית", "הכפתור הימני: כשסופרים מהגדול לקטן"],
-            4: ["מה יונתן הביא לך?", "אירוע מוזיקלי", "5 אותיות, מתחיל ב-ה'"]
+            3: ["הסטטיסטיקה קובעת", "אין כמו בבית", "הספירה לקראת החתונה "],
+            4: ["מה רמז בחייאת'","את מסוגלת","אולי קניתי לך את זה"]
         };
     
         const songsData = [
@@ -1948,7 +2026,7 @@
             if(!map) {
                 
                 // 1. הגדרת המפה והמרכז שלה (שנה את המספרים למרכז האזור שלך)
-                map = L.map('leaflet-map', { zoomControl: false }).setView([32.02831001323778, 34.86129459121839], 13);
+                map = L.map('leaflet-map', { zoomControl: false }).setView([32.02831001323778, 34.86129459121839], 15);
                 
                 // טעינת העיצוב של המפה
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -2023,13 +2101,42 @@
     
         function initMixer() {
             fadersLocked = false;
-            padStates = Array(8).fill(true);
             generateSoundBars();
             generateKeys();
-            generatePads();
-            syncPadsUI();
+            
+            // --- יצירת השנתות (מעודכן) ---
+            generateTicks('ticks-1', 0, 150, 50);
+            generateTicks('ticks-2', 0, 35, 5);
+            generateTicks('ticks-3', 0, 20, 5);
+
+            document.getElementById('range-1').value = 1;
+            document.getElementById('range-2').value = 1;
+            document.getElementById('range-3').value = 1;
+
             document.getElementById('status-text').textContent = 'SYNCING...';
             updateMixerUI();
+
+            // הסרנו את כל בלוק ה-pointerdown listeners כי ה-onclick ב-HTML כבר עובד
+            // ולא צריך כפילות שגורמת לקפיצה כפולה
+        }
+
+        function generateTicks(containerId, min, max, step) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            
+            // ביטלנו את ה-padding כדי שהמספרים יתיישרו בדיוק לקצוות
+            container.style.padding = '0'; 
+            
+            for (let i = min; i <= max; i += step) {
+                let valText = i === 0 ? 1 : i; 
+                const tick = document.createElement('div');
+                tick.className = 'tick-mark';
+                // גובה שורה של 0 כדי שהטקסט ימרכז את עצמו בדיוק על הקו
+                tick.style.lineHeight = '0'; 
+                tick.innerText = valText + '-'; 
+                container.appendChild(tick);
+            }
         }
     
         // --- HELPER FOR MIXER TO SAVE SPACE ---
@@ -2069,18 +2176,61 @@
         function updateMixerUI() {
             const ranges = [[1,150],[1,35],[1,21]];
             for(let i=1; i<=3; i++) {
-                const val = document.getElementById(`range-${i}`).value;
+                const rangeInput = document.getElementById(`range-${i}`);
+                const val = Number(rangeInput.value);
+                
+                // עדכון הטקסט הדיגיטלי למעלה
                 document.getElementById(`val-${i}`).innerText = val;
+                
                 const h = document.getElementById(`handle-${i}`);
-                const min=ranges[i-1][0], max=ranges[i-1][1];
-                h.style.bottom = ((val-min)/(max-min))*100 + '%';
+                const min = ranges[i-1][0];
+                const max = ranges[i-1][1];
+                
+                // חישוב אחוזים (0 עד 1)
+                let ratio = (val - min) / (max - min);
+                
+                // תיקון ויזואלי: 
+                // אנחנו רוצים שהידית לא תרד מתחת ל-2% ולא תעלה מעל 95% כדי לא לצאת מהמסגרת
+                // נוסחה: (ratio * (maxLimit - minLimit)) + minLimit
+                // נשתמש ב-% CSS למיקום Bottom
+                let visualPercent = (ratio * 93) + 4; 
+
+                h.style.bottom = `${visualPercent}%`;
             }
         }
         
-        function adjust(i,d) {
-            if(fadersLocked) return;
-            const el=document.getElementById(`range-${i}`);
-            el.value = Math.max(el.min, Math.min(el.max, parseInt(el.value)+d));
+        function adjust(i, d) {
+            if (fadersLocked) return;
+            
+            const el = document.getElementById(`range-${i}`);
+            
+            // המרה בטוחה למספרים
+            let currentVal = Number(el.value);
+            let minVal = Number(el.min);
+            let maxVal = Number(el.max);
+            
+            // חישוב הקפיצה:
+            // אם זה סליידר מס' 1 (הגדול, 1-150), נקפוץ ב-1 במקום 5 כדי לאפשר דיוק,
+            // או שנקפוץ ב-5 אם רוצים מהירות. נשאיר 1 לדיוק מירבי, או 5 לנוחות.
+            // עדיף 1 לדיוק:
+            let step = 1; 
+            
+            // אם בכל זאת רוצים קפיצה גדולה יותר בסליידר הארוך:
+            if (i === 1) step = 5; 
+
+            let newVal = currentVal + (d * step);
+            
+            // גבולות
+            if (newVal > maxVal) newVal = maxVal;
+            if (newVal < minVal) newVal = minVal;
+            
+            // עדכון ה-Input
+            el.value = newVal;
+            
+            // כפיית אירוע 'input' כדי ששאר המערכת תדע שהערך השתנה
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // עדכון ידני של ה-UI ליתר ביטחון
             updateMixerUI();
         }
     
@@ -2090,12 +2240,15 @@
                 const val = document.getElementById(`input-${lvl}`).value.trim();
                 if (val === answers[lvl]) correct = true;
             } else {
+                // לוגיקה חדשה לשלב 3 - בדיקה רק של הסליידרים
                 const v1=Number(document.getElementById('range-1').value), v2=Number(document.getElementById('range-2').value), v3=Number(document.getElementById('range-3').value);
                 if (v1===mixerTargets[0] && v2===mixerTargets[1] && v3===mixerTargets[2]) {
                     fadersLocked = true;
                     ['green','red','blue'].forEach((c,i)=>document.getElementById(`wrap-${i+1}`).className=`slider-wrapper locked-${c}`);
                     document.getElementById('status-text').textContent = 'LOCKED ✓';
-                    checkFinalVictory();
+                    
+                    // כאן השינוי: במקום לבדוק pads, מנצחים מיד
+                    setTimeout(() => handleSuccess(), 500);
                     return;
                 }
             }
